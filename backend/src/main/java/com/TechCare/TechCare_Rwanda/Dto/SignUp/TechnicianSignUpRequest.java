@@ -2,6 +2,7 @@ package com.TechCare.TechCare_Rwanda.Dto.SignUp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @AllArgsConstructor
@@ -14,8 +15,8 @@ public class TechnicianSignUpRequest {
     private String specialization;
     private String age;
     private String gender;
-    private String imageUrl;
-    private String certificationUrl;
+    private MultipartFile ImageFile;
+    private MultipartFile certificationUrl;
 
 
 

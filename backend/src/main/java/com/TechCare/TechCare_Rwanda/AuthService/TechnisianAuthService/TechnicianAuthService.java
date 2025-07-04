@@ -9,114 +9,135 @@ import com.TechCare.TechCare_Rwanda.EmailConfiguration.EmailService.EmailService
 import com.TechCare.TechCare_Rwanda.Repositories.TechnicianRepo.TechnicianRepo;
 import com.TechCare.TechCare_Rwanda.configuration.CustomUserDetailsService;
 import com.TechCare.TechCare_Rwanda.configuration.JwtProvider;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import io.jsonwebtoken.io.IOException;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.io.IOException;
-import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-
-@Service
-@RequiredArgsConstructor
+@Servive
 public class TechnicianAuthService implements ITechnicianAuthService{
     private final TechnicianRepo technicianRepo;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtProvider jwtProvider;
     private final EmailService emailService;
-
+   
+   
     private static final String PHOTO_DIRECTORY = System.getProperty("user.home") + "/techcare-uploads/images";
+    private static final String DOC_DIRECTORY = System.getProperty("user.home") + "/techcare-uploads/documents";
 
-    private final Function<String, String> fileExtension = filename -> Optional.ofNullable(filename)
+
+    private final Function<String, String> fileExtension = fileName -> Optional.ofNullable(fileName)
             .filter(name -> name.contains("."))
-            .map(name -> name.substring(filename.lastIndexOf(".") + 1))
+            .map(name -> name.substring(fileName.lastIndexOf('.') + 1))
             .orElse("png");
 
-    private final BiFunction<Long, MultipartFile, String> photoFunction = (id, image) -> {
+    
+    // Function to save the photo and return the file path
+    // This function takes an ID and a MultipartFile, saves the file, and returns the file path as a string.
+    private final BiFunction<Long, MultipartFile, String> photoFunction = (id, file) -> {
         try {
-            Path fileStorageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
-            if (!Files.exists(fileStorageLocation)) {
-                Files.createDirectories(fileStorageLocation);
-            }
-            String extension = fileExtension.apply(image.getOriginalFilename());
-            String fileName = id + "." + extension;
-            Files.copy(image.getInputStream(), fileStorageLocation.resolve(fileName), REPLACE_EXISTING);
-            return ServletUriComponentsBuilder
-                    .fromCurrentContextPath()
+            Path storage = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
+
+            if(!Files.exists(storage)) Files.createDirectories(storage);
+            String ext = fileExtension.apply(file.getOriginalFilename());
+            String fileName = id + "." + ext;
+            Files.copy(file.getInputStream(), storage.resolve(fileName), REPLACE_EXISTING);
+
+            return ServletUriComponentsBuilder.fromCurrentContextPath()
                     .path("/uploads/images/" + fileName)
                     .toUriString();
-        } catch (IOException e) {
-            throw new RuntimeException("Couldn't create directory for photo storage", e);
+
+        }
+        catch(IOException e) {
+            throw new RuntimeException("Failed to save photo", e);
+        }
+    } ;
+    
+    //Function  to save  document and return the file path 
+    private final BiFunction<Long, MultipartFile, String> documentFunction = (id, doc) -> {
+        try {
+
+              Path storage = Path.get(DOC_DIRECTORY).toAbsolutePath().normalize();
+              if(!Files.exists(storage)) Files.createDirectories(storage);
+                String ext = fileExtension.apply(doc.getOriginalFilename());
+                String fileName = id + "." + ext;
+                Files.copy(doc.getInputStream(), storage.resolve(fileName), REPLACE_EXISTING);
+
+                return ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/uploads/documents/" + fileName)
+                    .toUriString();
+
+
+        }catch(IOException e) {
+            throw new RuntimeException("Failed to save document", e);
         }
     };
 
+
     @Override
-    public Technician TechnicianSignUp(TechnicianSignUpRequest request) {
-        Technician existingTechnician = technicianRepo.findByEmail(request.getEmail());
-        if(existingTechnician != null){
-            throw new ResponseStatusException(BAD_REQUEST, "User with this email " + request.getEmail() + " already exists");
+    public Technician technicianSignUp(TechnicianSignUpRequest request) {
+        if(technicianRepo.existsByEmail(request.getEmail())){
+            throw new ResponseStatusException(BAD_REQUEST, "Email already exists with this  email :" + request.getEmail());
 
         }
-        Technician technician = technicianRepo.save(createTechnician(request));
 
-        // Send Welcome Email message with HTML and CSS
-        EmailDtos emailDtos = new EmailDtos();
-        emailDtos.setRecipient(request.getEmail());
-        emailDtos.setSubject("Welcome to TechCare - Technician Application Received");
-        emailDtos.setMessageBody(
-            """
-<html>
-<head>
-    <style>
-        .container { background: #f7f7f7; padding: 30px; border-radius: 10px; font-family: Arial, sans-serif; }
-        .header { color: #2d8cf0; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-        .body { color: #333; font-size: 16px; margin-bottom: 20px; }
-        .footer { color: #888; font-size: 14px; }
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>Thank you for joining TechCare!</div>
-        <div class='body'>
-            Thank you for joining our platform and completing your application.<br>
-            Your account will be reviewed and approved by an admin within <b>24 hours</b>.<br><br>
-            We appreciate your interest in becoming a technician with us.
-        </div>
-        <div class='footer'>
-            Best regards,<br>
-            <span style='color:#2d8cf0;'>TechCare Team</span>
-        </div>
-    </div>
-</body>
-</html>
-""");
-        emailService.sendEmail(emailDtos);
-        
-        return null;
-    }
+        // saving information in the database
+        Technician technician = new Technician();
+        technician.setFullName(request.getFullName());
+        technician.setEmail(request.getEmail());
+        technician.setPhoneNumber(request.getPhoneNumber());
+        technician.setSpecialization(request.getSpecialization());
+        technician.setAge(request.getAge());
+        technician.setGender(request.getGender());
+
+        Technician savedTechnician = technicianRepo.save(technician);
+
+        //Uploading photo and document
+         String imageUrl = photoFunction.apply(savedTechnician.getId(), request.getImageFile());
+         String certUrl  = documentFunction.apply(savedTechnician.getId(), request.getCertificationUrl());
+
+        //Setting the image and document URL to the technician
+        savedTechnician.setImageUrl(imageUrl);
+        savedTechnician.setCertificationUrl(certUrl);
+
+        technicianRepo.save(savedTechnician);
 
 
-    private Technician createTechnician(TechnicianSignUpRequest request) {
-        return new Technician(
-                request.getEmail(),
-                request.getPhoneNumber(),
-                request.getEmail(),
-                request.getSpecialization(),
-                request.getAge(),
-                request.getGender(),
-                request.getCertificationUrl(),
-                request.getImageUrl()
+        // Sending email notification
+        EmailDtos email = new EmailDtos();
+        email.setRecipient(request.getEmail());
+        email.setSubject("Welcome to TechCare - Technician Application Received");
+        email.setMessageBody(
+               "<html>\n" +
+               "<head>\n" +
+               "    <style>\n" +
+               "        .container { background: #f7f7f7; padding: 30px; border-radius: 10px; font-family: Arial, sans-serif; }\n" +
+               "        .header { color: #2d8cf0; font-size: 24px; font-weight: bold; margin-bottom: 10px; }\n" +
+               "        .body { color: #333; font-size: 16px; margin-bottom: 20px; }\n" +
+               "        .footer { color: #888; font-size: 14px; }\n" +
+               "    </style>\n" +
+               "</head>\n" +
+               "<body>\n" +
+               "    <div class='container'>\n" +
+               "        <div class='header'>Thank you for joining TechCare!</div>\n" +
+               "        <div class='body'>\n" +
+               "            Thank you for joining our platform and completing your application.<br>\n" +
+               "            Your account will be reviewed and approved by an admin within <b>24 hours</b>.<br><br>\n" +
+               "            We appreciate your interest in becoming a technician with us.\n" +
+               "        </div>\n" +
+               "        <div class='footer'>\n" +
+               "            Best regards,<br>\n" +
+               "            <span style='color:#2d8cf0;'>TechCare Team</span>\n" +
+               "        </div>\n" +
+               "    </div>\n" +
+               "</body>\n" +
+               "</html>\n"
         );
+
+        emailService.sendEmail(email);
+
+        return savedTechnician;
     }
+
+
 
     @Override
     public JwtResponse TechnicianLogin(TechnicianLoginRequest request) {
@@ -143,5 +164,6 @@ public class TechnicianAuthService implements ITechnicianAuthService{
         return null;
     }
 
+    
 
 }

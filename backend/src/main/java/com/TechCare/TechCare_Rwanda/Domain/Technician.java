@@ -36,7 +36,7 @@ public class Technician implements UserDetails {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @NotBlank(message = "Address is required")
+    @NotBlank(message = "Age is required")
     @Column(name = "age", nullable = false)
     private String age;
 
@@ -44,13 +44,10 @@ public class Technician implements UserDetails {
     @Column(name = "gender", nullable = false)
     private String gender;
 
-
-
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Please provide a valid phone number")
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
-
 
     private String password;
 
@@ -59,8 +56,6 @@ public class Technician implements UserDetails {
 
     @Column(name = "rating", precision = 2, scale = 1)
     private BigDecimal rating = BigDecimal.valueOf(0.0);
-
-
 
     private String imageUrl;
 
@@ -73,11 +68,10 @@ public class Technician implements UserDetails {
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable = true;
 
-
-
-    public Technician(String email, String phoneNumber, String email1, String specialization, String age, String gender, String certificationUrl, String imageUrl) {
-        this.email = email;
+    public Technician(String fullName, String phoneNumber, String email, String specialization, String age, String gender, String certificationUrl, String imageUrl) {
+        this.fullName = fullName;
         this.phoneNumber = phoneNumber;
+        this.email = email;
         this.specialization = specialization;
         this.age = age;
         this.gender = gender;
@@ -85,7 +79,6 @@ public class Technician implements UserDetails {
         this.imageUrl = imageUrl;
     }
 
-    // Enum for technician status
     public enum TechnicianStatus {
         PENDING,
         APPROVED,
@@ -99,13 +92,13 @@ public class Technician implements UserDetails {
     }
 
     @Override
-    public String getPassword() {
-        return password;
+    public String getUsername() {
+        return this.email;
     }
 
     @Override
-    public String getUsername() {
-        return email;
+    public String getPassword() {
+        return this.password;
     }
 
     @Override
@@ -115,7 +108,7 @@ public class Technician implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return status != TechnicianStatus.SUSPENDED;
+        return true;
     }
 
     @Override
@@ -125,16 +118,6 @@ public class Technician implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status == TechnicianStatus.APPROVED;
-    }
-
-    // Custom validation method
-    public boolean isApproved() {
-        return status == TechnicianStatus.APPROVED;
-    }
-
-    // Helper method to check if technician can accept orders
-    public boolean canAcceptOrders() {
-        return isApproved() && isAvailable && isAccountNonLocked();
+        return !this.status.equals(TechnicianStatus.SUSPENDED);
     }
 }
