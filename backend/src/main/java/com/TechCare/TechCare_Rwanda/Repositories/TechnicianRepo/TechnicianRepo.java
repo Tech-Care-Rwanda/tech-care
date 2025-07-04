@@ -4,4 +4,6 @@ import com.TechCare.TechCare_Rwanda.Domain.Technician;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TechnicianRepo extends JpaRepository<Technician,Long> {
+    Technician findByEmail(String username);
+
 }

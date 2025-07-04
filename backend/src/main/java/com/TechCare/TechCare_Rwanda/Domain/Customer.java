@@ -18,7 +18,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Customer implements UserDetails {
 
     @Id
@@ -49,6 +48,13 @@ public class Customer implements UserDetails {
     @Size(max = 255, message = "Image URL must not exceed 255 characters")
     @Column(name = "image", length = 255)
     private String image;
+
+    public Customer(String fullName, String phoneNumber, String email, String password) {
+        this.fullName = fullName;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.password = password;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

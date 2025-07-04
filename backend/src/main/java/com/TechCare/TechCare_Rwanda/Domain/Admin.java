@@ -49,6 +49,14 @@ public class Admin implements UserDetails {
     @Column(name = "image")
     private String image;
 
+
+    public Admin(String fullName, String phoneNumber, String email, String password) {
+    this.fullName = fullName;
+    this.phoneNumber = phoneNumber;
+    this.email = email;
+    this.password = password;
+}
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));

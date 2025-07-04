@@ -11,7 +11,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.stereotype.Service;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
@@ -40,17 +39,31 @@ public class SecutityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         http.csrf().disable()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/Customer/Signup", "/Customer/login").permitAll()
+                        .requestMatchers(
+                            "/api/v1/customer/signup", "/api/v1/customer/login",
+                            "/api/v1/admin/signup", "/api/v1/admin/login",
+                            "/api/v1/technician/signup", "/api/v1/technician/login"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/customer/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/v1/technician/**").hasRole("TECHNICIAN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtValidator, UsernamePasswordAuthenticationFilter.class)
-                .cors(cors -> cors.configurationSource(corsCongigurationSource()));
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
         return http.build();
     }
 
-    private CorsConfigurationSource corsCongigurationSource() {
-        // Implement your CORS configuration here
-        return null;
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        configuration.addAllowedOriginPattern("*"); 
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*"); 
+        configuration.setAllowCredentials(true);
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
 }
