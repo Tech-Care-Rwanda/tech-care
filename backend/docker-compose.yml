@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: techcare-postgres
+    environment:
+      POSTGRES_DB: techcare_db
+      POSTGRES_USER: techcare_user
+      POSTGRES_PASSWORD: techcare_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - techcare-network
+    restart: unless-stopped
+
+  # TechCare Spring Boot Application
+  techcare-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: techcare-backend
+    depends_on:
+      - postgres
+    environment:
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/techcare_db
+      SPRING_DATASOURCE_USERNAME: techcare_user
+      SPRING_DATASOURCE_PASSWORD: techcare_password
+      
+      # Email Configuration (you'll need to set these)
+      SPRING_MAIL_USERNAME: your-email@gmail.com
+      SPRING_MAIL_PASSWORD: your-app-password
+      
+      # File Upload Configuration
+      FILE_UPLOAD_DIR: /app/uploads
+      FILE_UPLOAD_IMAGES_PATH: /app/uploads/images
+      FILE_UPLOAD_DOCUMENTS_PATH: /app/uploads/documents
+      
+      # Supabase Configuration (you'll need to set these)
+      SUPABASE_URL: your-supabase-url
+      SUPABASE_ANON_KEY: your-supabase-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: your-supabase-service-role-key
+      
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "5001:5001"
+    volumes:
+      - techcare_uploads:/app/uploads
+    networks:
+      - techcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: techcare-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@techcare.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - techcare-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  techcare_uploads:
+    driver: local
+
+networks:
+  techcare-network:
+    driver: bridge

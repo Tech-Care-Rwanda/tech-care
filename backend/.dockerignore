@@ -1,0 +1,55 @@
+# Docker ignore file for Spring Boot application
+
+# Ignore build artifacts
+target/
+!target/TechCare-Rwanda-*.jar
+
+# Ignore IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore environment files
+.env
+.env.local
+.env.prod
+
+# Ignore temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Ignore node modules (if any)
+node_modules/
+
+# Ignore Maven wrapper jar
+.mvn/wrapper/maven-wrapper.jar
+
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore Docker files in the image
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Ignore documentation
+README.md
+HELP.md
+*.md
+
+# Ignore test files in production builds
+src/test/
