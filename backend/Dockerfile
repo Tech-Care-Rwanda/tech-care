@@ -1,27 +1,33 @@
-# Use OpenJDK 17 as the base image
-FROM openjdk:17-jdk-slim
+FROM maven:3.9.4-eclipse-temurin-17 AS build
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Install Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-
-# Copy the pom.xml and source code
+# Copy pom.xml and download dependencies
 COPY pom.xml .
-COPY src ./src
+RUN mvn dependency:go-offline -B
 
-# Build the application
+# Copy source code and build
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Create a directory for file uploads
-RUN mkdir -p /app/uploads/images /app/uploads/documents
+# Runtime stage
+FROM eclipse-temurin:17-jdk-alpine
 
-# Expose the port that the application runs on
-EXPOSE 5001
+WORKDIR /app
 
-# Set environment variables with default values
-ENV SPRING_PROFILES_ACTIVE=docker
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Run the application
-CMD ["java", "-jar", "target/TechCare-Rwanda-0.0.1-SNAPSHOT.jar"]
+# Copy the built jar
+COPY --from=build /app/target/*.jar app.jar
+
+# Create non-root user
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
