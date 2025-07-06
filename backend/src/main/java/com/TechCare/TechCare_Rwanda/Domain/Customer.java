@@ -2,7 +2,6 @@ package com.TechCare.TechCare_Rwanda.Domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -21,7 +21,7 @@ import java.util.List;
 public class Customer implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank(message = "Full name is required")
@@ -40,14 +40,19 @@ public class Customer implements UserDetails {
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
-            message = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character")
     @Column(name = "password", nullable = false)
     private String password;
 
     @Size(max = 255, message = "Image URL must not exceed 255 characters")
     @Column(name = "image", length = 255)
     private String image;
+
+    // Password reset fields
+    @Column(name = "reset_password_token")
+    private String resetPasswordToken;
+    
+    @Column(name = "reset_password_token_expiry")
+    private LocalDateTime resetPasswordTokenExpiry;
 
     public Customer(String fullName, String phoneNumber, String email, String password) {
         this.fullName = fullName;

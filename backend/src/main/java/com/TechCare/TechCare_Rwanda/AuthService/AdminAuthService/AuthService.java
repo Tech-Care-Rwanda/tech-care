@@ -1,10 +1,13 @@
 package com.TechCare.TechCare_Rwanda.AuthService.AdminAuthService;
 
 import com.TechCare.TechCare_Rwanda.Domain.Admin;
+import com.TechCare.TechCare_Rwanda.Domain.Technician;
 import com.TechCare.TechCare_Rwanda.Dto.Response.JwtResponse;
 import com.TechCare.TechCare_Rwanda.Dto.SignUp.AdminSignUpRequest;
 import com.TechCare.TechCare_Rwanda.Dto.login.AdminLoginRequest;
 import com.TechCare.TechCare_Rwanda.Repositories.AdminRepo.AdminRepo;
+import com.TechCare.TechCare_Rwanda.Repositories.TechnicianRepo.TechnicianRepo;
+import com.TechCare.TechCare_Rwanda.Services.AdminServices.IApproveService;
 import com.TechCare.TechCare_Rwanda.configuration.CustomUserDetailsService;
 import com.TechCare.TechCare_Rwanda.configuration.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +19,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService implements IAuthService{
     private final AdminRepo adminRepo;
-    private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
+    private final TechnicianRepo technicianRepo;
+    private final IApproveService approveService;
     @Override
     public Admin signUp(AdminSignUpRequest request) {
         Admin existingAdmin = adminRepo.findByEmail(request.getEmail());
@@ -116,7 +122,28 @@ public class AuthService implements IAuthService{
 
     @Override
     public Admin getAdminById(Long id) {
-        return null;
+        return adminRepo.findById(id).orElse(null);
+    }
+
+    // Technician management methods
+    @Override
+    public List<Technician> getAllPendingTechnicians() {
+        return technicianRepo.findByStatus(Technician.TechnicianStatus.PENDING);
+    }
+
+    @Override
+    public List<Technician> getAllTechnicians() {
+        return technicianRepo.findAll();
+    }
+
+    @Override
+    public Technician approveTechnician(Long technicianId) {
+        return approveService.approveTechnician(technicianId);
+    }
+
+    @Override
+    public Technician rejectTechnician(Long technicianId, String reason) {
+        return approveService.rejectTechnician(technicianId, reason);
     }
 
 

@@ -10,7 +10,10 @@ public interface ITechnicianAuthService {
     public Technician TechnicianSignUp(TechnicianSignUpRequest request);
     public JwtResponse TechnicianLogin(TechnicianLoginRequest request);
     public Technician getTechnicianById(Long id);
-    public Void  logoutTechnician(String token);
+    public Void logoutTechnician(String token);
     public Technician checkIfTechnicianAutheticated(String token);
     public Technician getTechnicianProfileFromToken(String token);
+    public Technician changePassword(String token, String currentPassword, String newPassword);
+    
+
 }
