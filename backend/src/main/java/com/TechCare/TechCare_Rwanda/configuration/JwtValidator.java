@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,8 +24,23 @@ import java.util.List;
 public class JwtValidator extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
+
+        String requestPath = request.getRequestURI();
+        String requestMethod = request.getMethod();
+        
+        // Skip JWT validation for OPTIONS requests (CORS preflight)
+        if ("OPTIONS".equalsIgnoreCase(requestMethod)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        // Skip JWT validation for public endpoints
+        if (isPublicEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String jwt = request.getHeader(JwtConstant.JWT_HEADER);
 
@@ -61,5 +77,26 @@ public class JwtValidator extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPublicEndpoint(String requestPath) {
+        String[] publicEndpoints = {
+            "/api/v1/customer/signup",
+            "/api/v1/customer/login",
+            "/api/v1/admin/signup", 
+            "/api/v1/admin/login",
+            "/api/v1/technician/signup",
+            "/api/v1/technician/login",
+            "/uploads/**",  // Allow access to uploaded files
+            "/actuator/**",
+            "/error"
+        };
+        
+        for (String endpoint : publicEndpoints) {
+            if (requestPath.startsWith(endpoint.replace("/**", ""))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

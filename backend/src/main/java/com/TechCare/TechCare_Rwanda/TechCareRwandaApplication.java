@@ -1,5 +1,6 @@
 package com.TechCare.TechCare_Rwanda;
 
+import com.TechCare.TechCare_Rwanda.configuration.EnvironmentConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -7,7 +8,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class TechCareRwandaApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TechCareRwandaApplication.class, args);
+		SpringApplication app = new SpringApplication(TechCareRwandaApplication.class);
+		app.addInitializers(new EnvironmentConfig());
+		app.run(args);
 	}
 
 }
