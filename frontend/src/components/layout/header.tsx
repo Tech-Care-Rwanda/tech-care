@@ -2,11 +2,13 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, X, User, LogOut, Settings, Bell } from "lucide-react"
-import { cn, UserRole, languages, Language } from "@/lib/utils"
+import { Menu, X, User, LogOut, Settings, Bell, ChevronDown } from "lucide-react"
+import { UserRole, Language } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { LanguageSwitcher } from "@/components/ui/language-switcher"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 
 interface HeaderProps {
   userType?: UserRole
@@ -45,6 +47,10 @@ export function Header({ userType = null }: HeaderProps) {
   const navItems = userType ? navigationItems[userType] : navigationItems.guest
   const isAuthenticated = Boolean(userType)
 
+  const handleLanguageChange = (newLang: Language) => {
+    setCurrentLang(newLang)
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,19 +78,13 @@ export function Header({ userType = null }: HeaderProps) {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            {/* Language Switcher */}
-            <div className="hidden sm:flex items-center space-x-2">
-              <select
-                value={currentLang}
-                onChange={(e) => setCurrentLang(e.target.value as Language)}
-                className="text-sm border border-input rounded px-2 py-1 bg-background"
-              >
-                {Object.entries(languages).map(([code, lang]) => (
-                  <option key={code} value={code}>
-                    {lang.flag} {lang.name}
-                  </option>
-                ))}
-              </select>
+            {/* Language Switcher with Globe Icon */}
+            <div className="hidden sm:block">
+              <LanguageSwitcher 
+                currentLanguage={currentLang}
+                onLanguageChange={handleLanguageChange}
+                variant="button"
+              />
             </div>
 
             {/* Authenticated User Menu */}
@@ -97,18 +97,39 @@ export function Header({ userType = null }: HeaderProps) {
                   </span>
                 </Button>
                 
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback>
-                      {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="hidden lg:block">
-                    <p className="text-sm font-medium">John Doe</p>
-                    <p className="text-xs text-muted-foreground capitalize">{userType}</p>
-                  </div>
-                </div>
+                {/* Profile Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2 hover:bg-accent">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="/placeholder-avatar.jpg" />
+                        <AvatarFallback>
+                          {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="hidden lg:block text-left">
+                        <p className="text-sm font-medium">John Doe</p>
+                        <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               /* Guest Actions */
@@ -204,17 +225,12 @@ export function Header({ userType = null }: HeaderProps) {
               {/* Mobile Language Switcher */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Language</p>
-                <select
-                  value={currentLang}
-                  onChange={(e) => setCurrentLang(e.target.value as Language)}
-                  className="w-full border border-input rounded px-3 py-2 bg-background"
-                >
-                  {Object.entries(languages).map(([code, lang]) => (
-                    <option key={code} value={code}>
-                      {lang.flag} {lang.name}
-                    </option>
-                  ))}
-                </select>
+                <LanguageSwitcher 
+                  currentLanguage={currentLang}
+                  onLanguageChange={handleLanguageChange}
+                  variant="dropdown"
+                  className="w-full"
+                />
               </div>
             </nav>
           </div>
