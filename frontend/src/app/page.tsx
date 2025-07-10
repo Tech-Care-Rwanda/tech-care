@@ -9,17 +9,18 @@ import { useRouter } from "next/navigation"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { useState, useEffect } from "react"
 import { Header } from "@/components/layout/header"
+import { LocationMapPicker } from "@/components/maps"
 
 export default function Home() {
   const router = useRouter()
   const { setSearchFilters, setIsLoading } = useSearch()
   const [searchData, setSearchData] = useState({
     location: 'Kigali',
+    coordinates: { lat: -1.9441, lng: 30.0619 },
     serviceType: 'Computer',
     urgency: 'Today',
     details: '2 devices'
   })
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [showServiceDropdown, setShowServiceDropdown] = useState(false)
   const [showUrgencyDropdown, setShowUrgencyDropdown] = useState(false)
 
@@ -28,7 +29,6 @@ export default function Home() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
       if (!target.closest('[data-search-dropdown]')) {
-        setShowLocationDropdown(false)
         setShowServiceDropdown(false)
         setShowUrgencyDropdown(false)
       }
@@ -38,9 +38,16 @@ export default function Home() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  const locations = ['Kigali', 'Huye', 'Musanze', 'Rubavu', 'Nyagatare']
   const serviceTypes = ['Computer', 'Mobile Device', 'Network/WiFi', 'Software', 'All Services']
   const urgencyOptions = ['Today', 'Tomorrow', 'This Week', 'Flexible']
+
+  const handleLocationChange = (location: string, coordinates?: { lat: number; lng: number }) => {
+    setSearchData(prev => ({
+      ...prev,
+      location,
+      coordinates: coordinates || prev.coordinates
+    }))
+  }
 
   const handleSearch = () => {
     setIsLoading(true)
@@ -106,65 +113,29 @@ export default function Home() {
         
         <div className="relative z-10 text-center space-y-6 sm:space-y-8 px-4 sm:px-6">
           {/* Search Bar */}
-          <div className="bg-white rounded-2xl sm:rounded-full p-3 sm:p-2 max-w-4xl mx-auto shadow-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-              {/* Location Dropdown */}
-              <div className="relative" data-search-dropdown>
-                <div 
-                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowLocationDropdown(!showLocationDropdown)
-                    setShowServiceDropdown(false)
-                    setShowUrgencyDropdown(false)
-                  }}
-                >
-                  <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Location</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.location}</p>
-                  </div>
-                  <ChevronDown 
-                    className={`h-4 w-4 text-gray-400 transition-transform ${
-                      showLocationDropdown ? 'rotate-180' : ''
-                    }`} 
-                  />
-                </div>
-                {showLocationDropdown && (
-                  <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {locations.map((location) => (
-                      <div
-                        key={location}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSearchData({ ...searchData, location })
-                          setShowLocationDropdown(false)
-                        }}
-                      >
-                        {location}
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <div className="bg-white rounded-2xl p-4 max-w-5xl mx-auto shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Location Map Picker */}
+              <div className="md:col-span-1">
+                <LocationMapPicker
+                  selectedLocation={searchData.location}
+                  onLocationChange={handleLocationChange}
+                />
               </div>
               
               {/* Service Type Dropdown */}
               <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer sm:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowServiceDropdown(!showServiceDropdown)
-                    setShowLocationDropdown(false)
                     setShowUrgencyDropdown(false)
                   }}
                 >
                   <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Service Type</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.serviceType}</p>
+                    <p className="font-semibold text-sm text-gray-900">Service Type</p>
+                    <p className="text-gray-700 text-sm">{searchData.serviceType}</p>
                   </div>
                   <ChevronDown 
                     className={`h-4 w-4 text-gray-400 transition-transform ${
@@ -180,7 +151,7 @@ export default function Home() {
                     {serviceTypes.map((service) => (
                       <div
                         key={service}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSearchData({ ...searchData, serviceType: service })
@@ -197,17 +168,16 @@ export default function Home() {
               {/* Urgency Dropdown */}
               <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer md:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowUrgencyDropdown(!showUrgencyDropdown)
-                    setShowLocationDropdown(false)
                     setShowServiceDropdown(false)
                   }}
                 >
                   <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Urgency</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.urgency}</p>
+                    <p className="font-semibold text-sm text-gray-900">Urgency</p>
+                    <p className="text-gray-700 text-sm">{searchData.urgency}</p>
                   </div>
                   <ChevronDown 
                     className={`h-4 w-4 text-gray-400 transition-transform ${
@@ -223,7 +193,7 @@ export default function Home() {
                     {urgencyOptions.map((urgency) => (
                       <div
                         key={urgency}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSearchData({ ...searchData, urgency })
@@ -237,24 +207,26 @@ export default function Home() {
                 )}
               </div>
               
-              {/* Details Input */}
-              <div className="flex items-center justify-between space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 md:border-l border-gray-200 transition-colors">
-                <div className="flex-1 text-left">
-                  <p className="font-semibold text-xs sm:text-sm text-gray-900">Details</p>
-                  <input
-                    type="text"
-                    placeholder="Describe issue"
-                    value={searchData.details}
-                    onChange={(e) => setSearchData({ ...searchData, details: e.target.value })}
-                    className="text-gray-700 text-xs sm:text-sm bg-transparent border-none outline-none w-full"
-                  />
+              {/* Details Input and Search Button */}
+              <div className="flex items-center space-x-3">
+                <div className="flex-1 px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors h-full">
+                  <div className="text-left">
+                    <p className="font-semibold text-sm text-gray-900">Details</p>
+                    <input
+                      type="text"
+                      placeholder="Describe issue"
+                      value={searchData.details}
+                      onChange={(e) => setSearchData({ ...searchData, details: e.target.value })}
+                      className="text-gray-700 text-sm bg-transparent border-none outline-none w-full"
+                    />
+                  </div>
                 </div>
                 <Button 
                   size="icon" 
-                  className="bg-red-500 hover:bg-red-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0"
+                  className="bg-red-500 hover:bg-red-600 rounded-lg w-12 h-12 flex-shrink-0"
                   onClick={handleSearch}
                 >
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <Search className="w-5 h-5 text-white" />
                 </Button>
               </div>
             </div>
