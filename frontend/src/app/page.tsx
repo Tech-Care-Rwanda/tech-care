@@ -95,7 +95,7 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-50">
-        <Header userType={null} variant="transparent" />
+        <Header variant="transparent" />
       </div>
 
       {/* Hero Section */}

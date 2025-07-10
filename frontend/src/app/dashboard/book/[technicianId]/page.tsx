@@ -192,10 +192,17 @@ export default function BookTechnicianPage() {
             <div className="flex items-center justify-between mb-8">
               {steps.map((step) => (
                 <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                    step.id <= currentStep ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                      step.id <= currentStep ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
+                    </div>
+                    <div className={`mt-2 text-xs text-center max-w-[80px] ${
+                      step.id <= currentStep ? 'text-red-600 font-medium' : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </div>
                   </div>
                   {step.id < steps.length && (
                     <div className={`w-12 h-1 mx-2 ${

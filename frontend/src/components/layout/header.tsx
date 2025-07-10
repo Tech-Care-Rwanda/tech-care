@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
+import { useAuth } from "@/lib/contexts/AuthContext"
 
 interface HeaderProps {
   userType?: UserRole
@@ -40,9 +41,13 @@ const navigationItems = {
 }
 
 export function Header({ userType = null, variant = "default" }: HeaderProps) {
+  const { user, isAuthenticated, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [currentLang, setCurrentLang] = React.useState<Language>("en")
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
+
+  // Use auth context user role, fallback to prop
+  const effectiveUserType = user?.role || userType
 
   // Initialize language from localStorage on mount
   React.useEffect(() => {
@@ -66,8 +71,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
     }
   }, [])
 
-  const navItems = userType ? navigationItems[userType] : navigationItems.guest
-  const isAuthenticated = Boolean(userType)
+  const navItems = effectiveUserType ? navigationItems[effectiveUserType] : navigationItems.guest
 
   // Close dropdowns when clicking outside
   React.useEffect(() => {
@@ -157,7 +161,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
               <div className="flex items-center space-x-3">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
                     3
                   </span>
                 </Button>
@@ -172,14 +176,20 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                     aria-controls="profile-dropdown-menu"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
+                      <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
                       <AvatarFallback>
-                        {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
+                        {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden lg:block">
-                      <p className="text-sm font-medium">John Doe</p>
-                      <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                      <p className={cn(
+                        "text-sm font-medium",
+                        variant === "transparent" ? "text-white" : "text-foreground"
+                      )}>{user?.name || "User"}</p>
+                      <p className={cn(
+                        "text-xs capitalize",
+                        variant === "transparent" ? "text-gray-200" : "text-muted-foreground"
+                      )}>{user?.role}</p>
                     </div>
                   </button>
                   
@@ -194,15 +204,15 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                       <div className="p-4 border-b">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-12 w-12">
-                            <AvatarImage src="/placeholder-avatar.jpg" />
+                            <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
                             <AvatarFallback>
-                              {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
+                              {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">John Doe</p>
-                            <p className="text-sm text-muted-foreground">john.doe@email.com</p>
-                            <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                            <p className="font-medium">{user?.name || "User"}</p>
+                            <p className="text-sm text-muted-foreground">{user?.email || ""}</p>
+                            <p className="text-xs text-red-600 capitalize font-medium">{user?.role}</p>
                           </div>
                         </div>
                       </div>
@@ -225,7 +235,15 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                           Settings
                         </Button>
                         <Separator className="my-2" />
-                        <Button variant="ghost" className="w-full justify-start text-destructive" role="menuitem">
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-destructive" 
+                          role="menuitem"
+                          onClick={() => {
+                            logout()
+                            setIsProfileDropdownOpen(false)
+                          }}
+                        >
                           <LogOut className="mr-2 h-4 w-4" />
                           Logout
                         </Button>
@@ -343,7 +361,14 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start text-destructive">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-destructive"
+                      onClick={() => {
+                        logout()
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       Logout
                     </Button>

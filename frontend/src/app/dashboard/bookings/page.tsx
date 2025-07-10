@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { DashboardLayout } from "@/components/layout/dashboard-layout"
 
 export default function BookingsPage() {
   const [activeTab, setActiveTab] = useState("all")
@@ -132,199 +133,144 @@ export default function BookingsPage() {
       })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-                <ChevronLeft className="w-5 h-5" />
-                <span>Back to Dashboard</span>
+    <DashboardLayout>
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
+        <p className="text-gray-600">Manage your tech support appointments and service history</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            {tab.label} ({tab.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Bookings List */}
+      <div className="space-y-6">
+        {filteredBookings.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+              <p className="text-gray-600 mb-6">You don&apos;t have any bookings in this category yet.</p>
+              <Link href="/search-results">
+                <Button>Find Technicians</Button>
               </Link>
-            </div>
-            
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <div className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder-avatar.jpg" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
-          <p className="text-gray-600">Manage your tech support appointments and service history</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </div>
-
-        {/* Bookings List */}
-        <div className="space-y-6">
-          {filteredBookings.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-                <p className="text-gray-600 mb-6">You don&apos;t have any bookings in this category yet.</p>
-                <Link href="/search-results">
-                  <Button>Find Technicians</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:space-x-6">
-                    {/* Technician Info */}
-                    <div className="flex items-start space-x-4 mb-4 lg:mb-0">
-                      <Avatar className="h-16 w-16">
+            </CardContent>
+          </Card>
+        ) : (
+          filteredBookings.map((booking) => (
+            <Card key={booking.id} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex flex-col lg:flex-row">
+                  {/* Technician Info */}
+                  <div className="lg:w-1/3 p-6 bg-gray-50">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={booking.technician.image} />
-                        <AvatarFallback>{booking.technician.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarFallback>
+                          {booking.technician.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{booking.technician.name}</h3>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium ml-1">{booking.technician.rating}</span>
-                            <span className="text-sm text-gray-500 ml-1">({booking.technician.reviews})</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm">
-                          <Button variant="outline" size="sm">
-                            <Phone className="w-4 h-4 mr-1" />
-                            Call
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <MessageSquare className="w-4 h-4 mr-1" />
-                            Message
-                          </Button>
+                        <h3 className="font-semibold text-gray-900">{booking.technician.name}</h3>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
+                          <span>{booking.technician.rating}</span>
+                          <span className="ml-1">({booking.technician.reviews} reviews)</span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Booking Details */}
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h4 className="text-xl font-semibold text-gray-900 mb-2">{booking.service}</h4>
-                          <p className="text-gray-600 mb-3">{booking.description}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(booking.status)}
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Service Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            {booking.date}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Clock className="w-4 h-4 mr-2" />
-                            {booking.time}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {booking.location}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 mb-2">Devices & Services:</p>
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {booking.devices.map((device, index) => (
-                              <li key={index}>• {device}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* Price & Actions */}
-                      <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                        <div>
-                          <span className="text-sm text-gray-500">Total Cost:</span>
-                          <span className="text-xl font-bold text-gray-900 ml-2">{booking.price}</span>
-                        </div>
-                        <div className="flex space-x-2">
-                          {booking.status === "pending" && (
-                            <>
-                              <Button variant="outline" size="sm">Cancel</Button>
-                              <Button size="sm">Confirm</Button>
-                            </>
-                          )}
-                          {booking.status === "confirmed" && (
-                            <>
-                              <Button variant="outline" size="sm">Reschedule</Button>
-                              <Button variant="outline" size="sm">Cancel</Button>
-                            </>
-                          )}
-                          {booking.status === "completed" && (
-                            <>
-                              <Button variant="outline" size="sm">Book Again</Button>
-                              <Button size="sm">Leave Review</Button>
-                            </>
-                          )}
-                          {booking.status === "cancelled" && (
-                            <Button size="sm">Book Again</Button>
-                          )}
-                        </div>
-                      </div>
+                    
+                    <div className="space-y-2">
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Phone className="w-4 h-4 mr-2" />
+                        Call Technician
+                      </Button>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Send Message
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
 
-        {/* New Booking CTA */}
-        <Card className="mt-8 bg-gradient-to-r from-red-500 to-pink-600 text-white">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-xl font-bold mb-2">Need More Tech Help?</h3>
-            <p className="text-red-100 mb-4">Find expert technicians in your area for any tech support needs</p>
-            <Link href="/search-results">
-              <Button className="bg-white text-red-600 hover:bg-gray-100">
-                Find Technicians
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+                  {/* Booking Details */}
+                  <div className="lg:w-2/3 p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2">{booking.service}</h4>
+                        <p className="text-gray-600 text-sm mb-3">{booking.description}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            <span>{booking.date}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <Clock className="w-4 h-4 mr-2" />
+                            <span>{booking.time}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="w-4 h-4 mr-2" />
+                            <span>{booking.location}</span>
+                          </div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {booking.price}
+                          </div>
+                        </div>
+
+                        {/* Devices/Items */}
+                        <div className="mt-4">
+                          <h5 className="text-sm font-medium text-gray-900 mb-2">Items/Devices:</h5>
+                          <div className="flex flex-wrap gap-2">
+                            {booking.devices.map((device, index) => (
+                              <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                                {device}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end space-y-2">
+                        {getStatusBadge(booking.status)}
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4 text-xs text-gray-500">
+                      Booked on {booking.bookingDate}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
-    </div>
+
+      {/* Action Buttons */}
+      {filteredBookings.length > 0 && (
+        <div className="mt-8 text-center">
+          <Link href="/search-results">
+            <Button>Book Another Service</Button>
+          </Link>
+        </div>
+      )}
+    </DashboardLayout>
   )
 } 
