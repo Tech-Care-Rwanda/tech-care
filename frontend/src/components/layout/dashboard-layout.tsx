@@ -16,13 +16,11 @@ import {
   Search,
   TrendingUp,
   Shield,
-  ChevronLeft,
   Menu
 } from "lucide-react"
 import { cn, UserRole } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { Header } from "./header"
 
 interface DashboardLayoutProps {

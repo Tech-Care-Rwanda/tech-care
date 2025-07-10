@@ -1,17 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import { useEffect, useState, Suspense } from "react"
 import Image from "next/image"
-import { Heart, Star, MapPin, Search } from "lucide-react"
+import { Heart, Star, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { useSearchParams, useRouter } from "next/navigation"
 import { filtersToURLParams, URLParamsToFilters } from "@/lib/contexts/SearchContext"
+import { Header } from "@/components/layout/header"
 
-export default function SearchResults() {
+function SearchResultsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { searchFilters, setSearchFilters, clearFilters, isLoading, setIsLoading } = useSearch()
@@ -116,39 +116,7 @@ export default function SearchResults() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TC</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/services" className="text-gray-600 hover:text-gray-900 transition-colors">Services</Link>
-              <Link href="/technicians" className="text-gray-600 hover:text-gray-900 transition-colors">Technicians</Link>
-              <Link href="/learn" className="text-gray-600 hover:text-gray-900 transition-colors">Learn</Link>
-            </nav>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="hidden sm:flex text-red-500 hover:text-red-600">
-                Become a Technician
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" className="text-gray-600">
-                  🌐
-                </Button>
-                <Button variant="ghost" size="icon" className="text-gray-600">
-                  ☰
-                </Button>
-                <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userType={null} variant="default" />
 
       {/* Search Bar */}
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
@@ -222,7 +190,7 @@ export default function SearchResults() {
                     {/* Dropdown Options */}
                     {category.type === "dropdown" && dropdownStates[category.key] && category.options && (
                       <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1">
-                        {category.options.map((option: any) => (
+                        {category.options.map((option: { value: string; label: string }) => (
                           <div
                             key={option.value}
                             className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
@@ -467,5 +435,13 @@ export default function SearchResults() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SearchResults() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchResultsContent />
+    </Suspense>
   )
 } 

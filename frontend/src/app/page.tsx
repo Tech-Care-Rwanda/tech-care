@@ -58,25 +58,29 @@ export default function Home() {
       title: "Tech support",
       description: "At your location",
       gradient: "from-green-400 to-blue-500",
-      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg"
+      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg",
+      serviceId: "computer"
     },
     {
       title: "Remote help",
       description: "Get Online Help from Experts",
       gradient: "from-purple-400 to-pink-500",
-      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg"
+      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg",
+      serviceId: "consultation"
     },
     {
       title: "Training",
       description: "Get trainings on proper usage",
       gradient: "from-red-400 to-pink-500",
-      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg"
+      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg",
+      serviceId: "consultation"
     },
     {
       title: "24/7 Support",
       description: "Anytime, anywhere faster",
       gradient: "from-orange-400 to-red-500",
-      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg"
+      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg",
+      serviceId: "software"
     }
   ]
 
@@ -258,7 +262,7 @@ export default function Home() {
           
           <div className="space-y-8 sm:space-y-10">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight px-2">
-              Need tech help? We've got you covered.
+              Need tech help? We&apos;ve got you covered.
             </h1>
             <Button 
               className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold"
@@ -279,7 +283,11 @@ export default function Home() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {services.map((service, index) => (
-              <Card key={index} className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={handleSearch}>
+              <Card 
+                key={index} 
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group" 
+                onClick={() => router.push(`/services/${service.serviceId}`)}
+              >
                 <div className="relative h-40 sm:h-48">
                   <Image
                     src={service.image}

@@ -19,12 +19,19 @@ export interface SearchFilters {
   availableNow: boolean
 }
 
+interface TechnicianResult {
+  id: number
+  name: string
+  title: string
+  [key: string]: unknown
+}
+
 interface SearchContextType {
   searchFilters: SearchFilters
   setSearchFilters: (filters: Partial<SearchFilters>) => void
   clearFilters: () => void
-  searchResults: any[]
-  setSearchResults: (results: any[]) => void
+  searchResults: TechnicianResult[]
+  setSearchResults: (results: TechnicianResult[]) => void
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
 }
@@ -50,7 +57,7 @@ const SearchContext = createContext<SearchContextType | undefined>(undefined)
 
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [searchFilters, setSearchFiltersState] = useState<SearchFilters>(defaultFilters)
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<TechnicianResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const setSearchFilters = useCallback((filters: Partial<SearchFilters>) => {
@@ -106,9 +113,9 @@ export function URLParamsToFilters(searchParams: URLSearchParams): Partial<Searc
     if (key in defaultFilters) {
       const filterKey = key as keyof SearchFilters
       if (typeof defaultFilters[filterKey] === 'boolean') {
-        (filters as any)[filterKey] = value === 'true'
+        (filters as Record<string, unknown>)[filterKey] = value === 'true'
       } else {
-        (filters as any)[filterKey] = value
+        (filters as Record<string, unknown>)[filterKey] = value
       }
     }
   })

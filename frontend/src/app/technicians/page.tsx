@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { Header } from "@/components/layout/header"
 import { 
   Star, 
   MapPin, 
@@ -99,31 +100,7 @@ export default function TechniciansPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TC</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/services" className="text-gray-600 hover:text-gray-900 transition-colors">Services</Link>
-              <Link href="/technicians" className="text-red-600 border-b-2 border-red-600 pb-1 font-medium">Technicians</Link>
-              <Link href="/learn" className="text-gray-600 hover:text-gray-900 transition-colors">Learn</Link>
-            </nav>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="text-red-500 hover:text-red-600">
-                Become a Technician
-              </Button>
-              <Button>Get Help</Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userType={null} variant="default" />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-red-500 to-pink-600 text-white py-16">
@@ -252,7 +229,7 @@ export default function TechniciansPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Become a TechCare Technician</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Join Rwanda's leading tech support platform and start earning while helping others
+              Join Rwanda&apos;s leading tech support platform and start earning while helping others
             </p>
           </div>
 

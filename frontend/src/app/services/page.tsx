@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { Header } from "@/components/layout/header"
 import { 
   Monitor, 
   Smartphone, 
@@ -10,14 +12,14 @@ import {
   Shield, 
   Wrench,
   Clock,
-  MapPin,
-  Star,
   ArrowRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function ServicesPage() {
+  const router = useRouter()
+  
   const services = [
     {
       id: 1,
@@ -27,7 +29,8 @@ export default function ServicesPage() {
       price: "From 8,000 RWF",
       duration: "1-4 hours",
       features: ["Hardware Setup", "Software Installation", "Troubleshooting", "Data Recovery"],
-      image: "/images/thisisengineering-hnXf73-K1zo-unsplash.jpg"
+      image: "/images/thisisengineering-hnXf73-K1zo-unsplash.jpg",
+      serviceId: "computer"
     },
     {
       id: 2,
@@ -37,7 +40,8 @@ export default function ServicesPage() {
       price: "From 5,000 RWF",
       duration: "30min-2 hours",
       features: ["Screen Repair", "Data Transfer", "App Setup", "Performance Optimization"],
-      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg"
+      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg",
+      serviceId: "phone"
     },
     {
       id: 3,
@@ -47,7 +51,8 @@ export default function ServicesPage() {
       price: "From 10,000 RWF",
       duration: "1-3 hours",
       features: ["WiFi Setup", "Network Security", "Speed Optimization", "Smart Home Integration"],
-      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg"
+      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg",
+      serviceId: "networking"
     },
     {
       id: 4,
@@ -57,7 +62,8 @@ export default function ServicesPage() {
       price: "From 6,000 RWF",
       duration: "30min-2 hours",
       features: ["Software Installation", "System Updates", "Virus Removal", "Performance Tuning"],
-      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg"
+      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg",
+      serviceId: "software"
     },
     {
       id: 5,
@@ -67,7 +73,8 @@ export default function ServicesPage() {
       price: "From 12,000 RWF",
       duration: "1-3 hours",
       features: ["Antivirus Setup", "Data Backup", "Security Audits", "Password Management"],
-      image: "/images/sammyayot254-vIQDv6tUHYk-unsplash.jpg"
+      image: "/images/sammyayot254-vIQDv6tUHYk-unsplash.jpg",
+      serviceId: "software"
     },
     {
       id: 6,
@@ -77,38 +84,15 @@ export default function ServicesPage() {
       price: "From 15,000 RWF",
       duration: "2-4 hours",
       features: ["Hardware Diagnostics", "Component Replacement", "System Cleaning", "Performance Testing"],
-      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg"
+      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg",
+      serviceId: "computer"
     }
   ]
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TC</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/services" className="text-red-600 border-b-2 border-red-600 pb-1 font-medium">Services</Link>
-              <Link href="/technicians" className="text-gray-600 hover:text-gray-900 transition-colors">Technicians</Link>
-              <Link href="/learn" className="text-gray-600 hover:text-gray-900 transition-colors">Learn</Link>
-            </nav>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="text-red-500 hover:text-red-600">
-                Become a Technician
-              </Button>
-              <Button>Get Help</Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userType={null} variant="default" />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-red-500 to-pink-600 text-white py-16">
@@ -175,7 +159,7 @@ export default function ServicesPage() {
                     </div>
                     
                     <div className="mb-6">
-                      <h4 className="font-medium text-gray-900 mb-2">What's included:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">What&apos;s included:</h4>
                       <ul className="space-y-1">
                         {service.features.map((feature, index) => (
                           <li key={index} className="text-sm text-gray-600 flex items-center">
@@ -186,12 +170,13 @@ export default function ServicesPage() {
                       </ul>
                     </div>
                     
-                    <Link href="/search-results">
-                      <Button className="w-full bg-red-500 hover:bg-red-600">
-                        Book Now
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
+                    <Button 
+                      className="w-full bg-red-500 hover:bg-red-600"
+                      onClick={() => router.push(`/services/${service.serviceId}`)}
+                    >
+                      View Details
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                   </CardContent>
                 </Card>
               )
@@ -207,7 +192,7 @@ export default function ServicesPage() {
             Need Custom Tech Support?
           </h2>
           <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-            Don't see what you're looking for? Our technicians can help with custom solutions 
+            Don&apos;t see what you&apos;re looking for? Our technicians can help with custom solutions 
             tailored to your specific needs.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">

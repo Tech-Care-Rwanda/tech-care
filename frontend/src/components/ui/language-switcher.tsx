@@ -20,25 +20,26 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const [selectedLang, setSelectedLang] = React.useState<Language>(currentLanguage)
 
+  // Sync with parent component when currentLanguage prop changes
+  React.useEffect(() => {
+    setSelectedLang(currentLanguage)
+  }, [currentLanguage])
+
   const handleLanguageChange = (newLang: Language) => {
     setSelectedLang(newLang)
     onLanguageChange?.(newLang)
-    
-    // Store in localStorage for persistence
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('techcare-language', newLang)
-    }
   }
 
   React.useEffect(() => {
-    // Load from localStorage on mount
-    if (typeof window !== 'undefined') {
+    // Load from localStorage on mount only if no currentLanguage prop provided
+    if (typeof window !== 'undefined' && currentLanguage === "en") {
       const savedLang = localStorage.getItem('techcare-language') as Language
       if (savedLang && languages[savedLang]) {
         setSelectedLang(savedLang)
+        onLanguageChange?.(savedLang)
       }
     }
-  }, [])
+  }, [currentLanguage, onLanguageChange])
 
   if (variant === "dropdown") {
     return (

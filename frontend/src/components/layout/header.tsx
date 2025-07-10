@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { Menu, X, User, LogOut, Settings, Bell } from "lucide-react"
-import { cn, UserRole, languages, Language } from "@/lib/utils"
+import { cn, UserRole, Language } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
@@ -17,9 +17,8 @@ interface HeaderProps {
 const navigationItems = {
   guest: [
     { label: "Services", href: "/services" },
-    { label: "How it Works", href: "/how-it-works" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
+    { label: "Find Technicians", href: "/technicians" },
+    { label: "How it Works", href: "/learn" },
   ],
   customer: [
     { label: "Find Technicians", href: "/technicians" },
@@ -45,6 +44,28 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
   const [currentLang, setCurrentLang] = React.useState<Language>("en")
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
 
+  // Initialize language from localStorage on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem('techcare-language') as Language
+      if (savedLang && (savedLang === 'en' || savedLang === 'rw' || savedLang === 'fr')) {
+        setCurrentLang(savedLang)
+      }
+    }
+  }, [])
+
+  // Handle language change with proper synchronization
+  const handleLanguageChange = React.useCallback((newLang: Language) => {
+    setCurrentLang(newLang)
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('techcare-language', newLang)
+      }
+    } catch (error) {
+      console.warn('Failed to save language preference:', error)
+    }
+  }, [])
+
   const navItems = userType ? navigationItems[userType] : navigationItems.guest
   const isAuthenticated = Boolean(userType)
 
@@ -62,6 +83,23 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [isProfileDropdownOpen])
+
+  // Handle escape key to close mobile menu and dropdowns
+  React.useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isMobileMenuOpen) {
+          setIsMobileMenuOpen(false)
+        }
+        if (isProfileDropdownOpen) {
+          setIsProfileDropdownOpen(false)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleEscapeKey)
+    return () => document.removeEventListener('keydown', handleEscapeKey)
+  }, [isMobileMenuOpen, isProfileDropdownOpen])
 
   return (
     <header className={cn(
@@ -107,7 +145,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
             <div className="hidden sm:flex">
               <LanguageSwitcher
                 currentLanguage={currentLang}
-                onLanguageChange={setCurrentLang}
+                onLanguageChange={handleLanguageChange}
                 variant="dropdown"
               />
             </div>
@@ -123,9 +161,13 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 </Button>
                 
                 <div className="relative" data-profile-dropdown>
-                  <div 
+                  <button 
                     className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors"
                     onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    aria-label="User menu"
+                    aria-expanded={isProfileDropdownOpen}
+                    aria-haspopup="menu"
+                    aria-controls="profile-dropdown-menu"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/placeholder-avatar.jpg" />
@@ -137,11 +179,16 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                       <p className="text-sm font-medium">John Doe</p>
                       <p className="text-xs text-muted-foreground capitalize">{userType}</p>
                     </div>
-                  </div>
+                  </button>
                   
                   {/* Profile Dropdown */}
                   {isProfileDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-background border rounded-lg shadow-lg z-50">
+                    <div 
+                      id="profile-dropdown-menu"
+                      className="absolute right-0 top-full mt-2 w-64 bg-background border rounded-lg shadow-lg z-[60]"
+                      role="menu"
+                      aria-labelledby="user-menu-button"
+                    >
                       <div className="p-4 border-b">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-12 w-12">
@@ -158,25 +205,25 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                         </div>
                       </div>
                       
-                      <div className="p-2">
+                      <div className="p-2" role="none">
                         <Button variant="ghost" className="w-full justify-start" asChild>
-                          <Link href="/dashboard/profile">
+                          <Link href="/dashboard/profile" role="menuitem" onClick={() => setIsProfileDropdownOpen(false)}>
                             <User className="mr-2 h-4 w-4" />
                             View Profile
                           </Link>
                         </Button>
                         <Button variant="ghost" className="w-full justify-start" asChild>
-                          <Link href="/dashboard">
+                          <Link href="/dashboard" role="menuitem" onClick={() => setIsProfileDropdownOpen(false)}>
                             <Settings className="mr-2 h-4 w-4" />
                             Dashboard
                           </Link>
                         </Button>
-                        <Button variant="ghost" className="w-full justify-start">
+                        <Button variant="ghost" className="w-full justify-start" role="menuitem">
                           <Settings className="mr-2 h-4 w-4" />
                           Settings
                         </Button>
                         <Separator className="my-2" />
-                        <Button variant="ghost" className="w-full justify-start text-destructive">
+                        <Button variant="ghost" className="w-full justify-start text-destructive" role="menuitem">
                           <LogOut className="mr-2 h-4 w-4" />
                           Logout
                         </Button>
@@ -217,6 +264,9 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                   : ""
               )}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {isMobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -231,14 +281,25 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
       {/* Mobile Navigation Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="fixed inset-0 bg-black/20" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-background p-6 shadow-lg">
+          <div 
+            className="fixed inset-0 bg-black/20" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div 
+            id="mobile-navigation"
+            className="fixed right-0 top-0 h-full w-full max-w-sm bg-background p-6 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation menu"
+          >
             <div className="flex items-center justify-between">
               <span className="text-lg font-semibold">Menu</span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -295,7 +356,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 <p className="text-sm font-medium text-muted-foreground">Language</p>
                 <LanguageSwitcher
                   currentLanguage={currentLang}
-                  onLanguageChange={setCurrentLang}
+                  onLanguageChange={handleLanguageChange}
                   variant="dropdown"
                   className="w-full"
                 />
