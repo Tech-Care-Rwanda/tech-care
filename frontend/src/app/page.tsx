@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search } from "lucide-react"
+import { Search, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { useState, useEffect } from "react"
+import { Header } from "@/components/layout/header"
 
 export default function Home() {
   const router = useRouter()
@@ -24,10 +25,13 @@ export default function Home() {
 
   // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowLocationDropdown(false)
-      setShowServiceDropdown(false)
-      setShowUrgencyDropdown(false)
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-search-dropdown]')) {
+        setShowLocationDropdown(false)
+        setShowServiceDropdown(false)
+        setShowUrgencyDropdown(false)
+      }
     }
 
     document.addEventListener('click', handleClickOutside)
@@ -79,37 +83,9 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TC</span>
-            </div>
-            <span className="text-white font-semibold text-lg sm:text-xl">TechCare</span>
-          </div>
-          
-          <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-            <Link href="/services" className="text-white hover:text-gray-200 transition-colors">Services</Link>
-            <Link href="/technicians" className="text-white hover:text-gray-200 transition-colors">Technicians</Link>
-            <Link href="/learn" className="text-white hover:text-gray-200 transition-colors">Learn</Link>
-          </nav>
-          
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Button variant="ghost" className="hidden sm:flex text-white hover:bg-white/10 text-sm px-3 py-2">
-              Become a Technician
-            </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-8 h-8 sm:w-10 sm:h-10">
-                🌐
-              </Button>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-8 h-8 sm:w-10 sm:h-10">
-                ☰
-              </Button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="absolute top-0 left-0 right-0 z-50">
+        <Header userType={null} variant="transparent" />
+      </div>
 
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
@@ -129,9 +105,9 @@ export default function Home() {
           <div className="bg-white rounded-2xl sm:rounded-full p-3 sm:p-2 max-w-4xl mx-auto shadow-2xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
               {/* Location Dropdown */}
-              <div className="relative">
+              <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowLocationDropdown(!showLocationDropdown)
@@ -143,10 +119,15 @@ export default function Home() {
                     <p className="font-semibold text-xs sm:text-sm text-gray-900">Location</p>
                     <p className="text-gray-700 text-xs sm:text-sm">{searchData.location}</p>
                   </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showLocationDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
                 </div>
                 {showLocationDropdown && (
                   <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
+                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {locations.map((location) => (
@@ -167,9 +148,9 @@ export default function Home() {
               </div>
               
               {/* Service Type Dropdown */}
-              <div className="relative">
+              <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer sm:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer sm:border-l border-gray-200 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowServiceDropdown(!showServiceDropdown)
@@ -181,10 +162,15 @@ export default function Home() {
                     <p className="font-semibold text-xs sm:text-sm text-gray-900">Service Type</p>
                     <p className="text-gray-700 text-xs sm:text-sm">{searchData.serviceType}</p>
                   </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showServiceDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
                 </div>
                 {showServiceDropdown && (
                   <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
+                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {serviceTypes.map((service) => (
@@ -205,9 +191,9 @@ export default function Home() {
               </div>
               
               {/* Urgency Dropdown */}
-              <div className="relative">
+              <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer md:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer md:border-l border-gray-200 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowUrgencyDropdown(!showUrgencyDropdown)
@@ -219,10 +205,15 @@ export default function Home() {
                     <p className="font-semibold text-xs sm:text-sm text-gray-900">Urgency</p>
                     <p className="text-gray-700 text-xs sm:text-sm">{searchData.urgency}</p>
                   </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showUrgencyDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
                 </div>
                 {showUrgencyDropdown && (
                   <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
+                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {urgencyOptions.map((urgency) => (

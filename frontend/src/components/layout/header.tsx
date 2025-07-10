@@ -7,9 +7,11 @@ import { cn, UserRole, languages, Language } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { LanguageSwitcher } from "@/components/ui/language-switcher"
 
 interface HeaderProps {
   userType?: UserRole
+  variant?: "default" | "transparent"
 }
 
 const navigationItems = {
@@ -38,23 +40,47 @@ const navigationItems = {
   ],
 }
 
-export function Header({ userType = null }: HeaderProps) {
+export function Header({ userType = null, variant = "default" }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [currentLang, setCurrentLang] = React.useState<Language>("en")
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
 
   const navItems = userType ? navigationItems[userType] : navigationItems.guest
   const isAuthenticated = Boolean(userType)
 
+  // Close dropdowns when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-profile-dropdown]')) {
+        setIsProfileDropdownOpen(false)
+      }
+    }
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isProfileDropdownOpen])
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={cn(
+      "sticky top-0 z-50 w-full",
+      variant === "transparent" 
+        ? "bg-transparent border-none" 
+        : "border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+    )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">TC</span>
+            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">TC</span>
             </div>
-            <span className="hidden font-bold sm:inline-block">TechCare Rwanda</span>
+            <span className={cn(
+              "font-semibold text-lg sm:text-xl",
+              variant === "transparent" ? "text-white" : "text-foreground"
+            )}>TechCare</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -63,7 +89,12 @@ export function Header({ userType = null }: HeaderProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-sm font-medium transition-colors hover:text-primary"
+                className={cn(
+                  "text-sm font-medium transition-colors",
+                  variant === "transparent"
+                    ? "text-white hover:text-gray-200"
+                    : "text-foreground hover:text-primary"
+                )}
               >
                 {item.label}
               </Link>
@@ -73,18 +104,12 @@ export function Header({ userType = null }: HeaderProps) {
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
             {/* Language Switcher */}
-            <div className="hidden sm:flex items-center space-x-2">
-              <select
-                value={currentLang}
-                onChange={(e) => setCurrentLang(e.target.value as Language)}
-                className="text-sm border border-input rounded px-2 py-1 bg-background"
-              >
-                {Object.entries(languages).map(([code, lang]) => (
-                  <option key={code} value={code}>
-                    {lang.flag} {lang.name}
-                  </option>
-                ))}
-              </select>
+            <div className="hidden sm:flex">
+              <LanguageSwitcher
+                currentLanguage={currentLang}
+                onLanguageChange={setCurrentLang}
+                variant="dropdown"
+              />
             </div>
 
             {/* Authenticated User Menu */}
@@ -97,26 +122,85 @@ export function Header({ userType = null }: HeaderProps) {
                   </span>
                 </Button>
                 
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback>
-                      {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="hidden lg:block">
-                    <p className="text-sm font-medium">John Doe</p>
-                    <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                <div className="relative" data-profile-dropdown>
+                  <div 
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors"
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/placeholder-avatar.jpg" />
+                      <AvatarFallback>
+                        {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden lg:block">
+                      <p className="text-sm font-medium">John Doe</p>
+                      <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                    </div>
                   </div>
+                  
+                  {/* Profile Dropdown */}
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-background border rounded-lg shadow-lg z-50">
+                      <div className="p-4 border-b">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src="/placeholder-avatar.jpg" />
+                            <AvatarFallback>
+                              {userType === "customer" ? "C" : userType === "technician" ? "T" : "A"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">John Doe</p>
+                            <p className="text-sm text-muted-foreground">john.doe@email.com</p>
+                            <p className="text-xs text-muted-foreground capitalize">{userType}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-2">
+                        <Button variant="ghost" className="w-full justify-start" asChild>
+                          <Link href="/dashboard/profile">
+                            <User className="mr-2 h-4 w-4" />
+                            View Profile
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start" asChild>
+                          <Link href="/dashboard">
+                            <Settings className="mr-2 h-4 w-4" />
+                            Dashboard
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Settings
+                        </Button>
+                        <Separator className="my-2" />
+                        <Button variant="ghost" className="w-full justify-start text-destructive">
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Logout
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
               /* Guest Actions */
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild className="hidden sm:inline-flex">
+                <Button 
+                  variant="ghost" 
+                  asChild 
+                  className={cn(
+                    "hidden sm:inline-flex",
+                    variant === "transparent" 
+                      ? "text-white hover:bg-white/10 hover:text-white" 
+                      : ""
+                  )}
+                >
                   <Link href="/login">Login</Link>
                 </Button>
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="bg-red-500 hover:bg-red-600 text-white">
                   <Link href="/signup">Get Started</Link>
                 </Button>
               </div>
@@ -126,7 +210,12 @@ export function Header({ userType = null }: HeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className={cn(
+                "md:hidden",
+                variant === "transparent" 
+                  ? "text-white hover:bg-white/10 hover:text-white" 
+                  : ""
+              )}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (
@@ -204,17 +293,12 @@ export function Header({ userType = null }: HeaderProps) {
               {/* Mobile Language Switcher */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Language</p>
-                <select
-                  value={currentLang}
-                  onChange={(e) => setCurrentLang(e.target.value as Language)}
-                  className="w-full border border-input rounded px-3 py-2 bg-background"
-                >
-                  {Object.entries(languages).map(([code, lang]) => (
-                    <option key={code} value={code}>
-                      {lang.flag} {lang.name}
-                    </option>
-                  ))}
-                </select>
+                <LanguageSwitcher
+                  currentLanguage={currentLang}
+                  onLanguageChange={setCurrentLang}
+                  variant="dropdown"
+                  className="w-full"
+                />
               </div>
             </nav>
           </div>
