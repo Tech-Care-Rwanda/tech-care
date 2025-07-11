@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { TechnicianSignUp, CustomerOrAdminSignUp } = require('../Controllers/AutheticationControllers');
+const { TechnicianSignUp, CustomerOrAdminSignUp, Login } = require('../Controllers/AutheticationControllers');
 const { uploadTechnicianFiles } = require('../Configuration/fileMulterConfig');
 
 
@@ -61,6 +61,9 @@ router.post('/technician/signup',
     // Process the signup
     TechnicianSignUp
 );
+
+// Login Route for Customer, Admin and Technician
+router.post('/login', Login);
 
 module.exports = router;
 

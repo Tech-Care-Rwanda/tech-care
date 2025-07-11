@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const emailService = require('../Configuration/EmailConfig');
 
 const dotenv = require('dotenv');
+const { token } = require('morgan');
 const prisma = new PrismaClient();
 // Load  environment variables
 dotenv.config();
@@ -339,37 +340,148 @@ const TechnicianSignUp = async (req, res) => {
 
 
 
-// Login  for  Customer,  admin  and technician
+// Login for Customer, Admin and Technician
 const Login = async (req, res) => {
     try {
-        // Extract email and password from request body
+        // Extract email and passoword from request body
         const { email, password} = req.body;
 
-        // Validate inputs
+        // Validate input
         if (!email || !password){
-            return res.status(400).json({ message: 'Email and password are required' });
+            return res.status(400).json({
+                message: 'Email and password are require'
+            })
         }
 
-        // Find user by email 
-        const user = await prisma.user.findUnique({
-            where: { email }
+        // Find user by email in database with technician details
+        const user  = await prisma.user.findUnique({
+            where: {email},
+
+            include: {
+                technicianDetails: true 
+            }
+            
+
         });
 
-        // Check if user exists
+
+        //check if user exists
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // Check if user account is active
+        if (!user.isActive) {
+            return res.status(403).json({ 
+                message: 'Your account has been deactivated. Please contact support.' 
+            });
+        }
+
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
         
+        // Role-based status validation
+        switch (user.role){
+             case 'CUSTOMER':
+                break;
+
+             case 'ADMIN':
+                break;
+                
+             case 'TECHNICIAN':
+                  // Special validation for technicians
+                  if (!user.technicianDetails){
+                         return res.status(403).json({
+                             message: 'Access denied - Technician profile not found. Please contact support.'
+                         });
+                  }
+
+                  // Check technician approval status
+                  if (user.technicianDetails.approvalStatus !== 'PENDING'){
+                        return res.status(403).json({
+                            message: 'Your technician account is not approved . Please wait for approval before logging in'
+                        })
+                  }
+                 
+                  if (user.technicianDetails.approvalStatus === 'REJECTED') {
+                        return res.status(403).json({
+                            message: 'Your technician account has been rejected. Please contact support for assistance.'
+                        });
+                  }
+
+                  if (user.technicianDetails.approvalStatus !== 'APPROVED') {
+                    return res.status(403).json({ 
+                        message: 'Your technician account is not approved. Please contact support.' 
+                    });
+                }
+
+                  break;
+
+            default:
+                     return res.status(403).json({ 
+                             message: 'Invalid user role. Please contact support.' 
+                         });
+               
+
+        }
+
+         // Generate JWT token with user info details
+                const tokenPayload = {
+                     userId: user.id,
+                        email: user.email,
+                        role: user.role,
+                        fullName: user.fullName,
+                        technicianDetails: user.technicianDetails ? user.technicianDetails.id : null
+                }
+
+                // Add technician Id if user is a technician
+                if (user.role === 'TECHNICIAN' && user.technicianDetails){
+                    tokenPayload.technicianId = user.technicianDetails.id;
+                }
+
+
+                const token = jwt.sign(
+                     tokenPayload,
+                     process.env.JWT_SECRET_KEY,
+                     { expiresIn: '24h' }
+                )
+
+                // Remove password from the response
+                const { password: _, ...userWithoutPassword } = user;
+
+                // Role-specific response message
+                 const roleMessage = {
+                     CUSTOMER: 'Customer login successful',
+                     ADMIN: 'Administrator login successful', 
+                     TECHNICIAN: 'Technician login successful'
+                 }
+
+              
+                 //Send success response
+                 return res.status(200).json({
+                        message: roleMessage[user.role] || 'Login successful',
+                        user: userWithoutPassword,
+                        token,
+                        role: user.role,
+                        loginTime: new Date().toISOString()
+                    
+                 })
 
     }
     catch (error) {
         console.error('Error during login:', error);
-        return res.status(500).json({ message: 'Internal server error', error: error.message });
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: error.message
+        })
     }
-    }
+}
 
 
 module.exports = {
-    TechnicianSignUp,  CustomerOrAdminSignUp
+    TechnicianSignUp,  CustomerOrAdminSignUp, Login
 }
+
