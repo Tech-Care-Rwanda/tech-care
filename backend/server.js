@@ -3,6 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { PrismaClient } = require('./generated/prisma');
 const AutheticationRoutes = require('./routes/AutheticationRoutes');
+const CustomerRoutes = require('./routes/CustomerRoutes')
+const AdminRoutes = require('./routes/AdminRoutes')
 const path = require('path');
 
 // Load environment variables
@@ -27,10 +29,32 @@ app.use((req, res, next) => {
 // All routes
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve password reset form
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
+// Serve login form
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Serve forgot password form
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'forgot-password.html'));
+});
+
+// Redirect root to login
+app.get('/', (req, res) => {
+  res.redirect('/login');
+});
 
 // Set up routes
 app.use('/api/v1/auth', AutheticationRoutes);
-
+app.use('/api/v1/customer',  CustomerRoutes);
+app.use('/api/v1/admin', AdminRoutes);
 
 // Health check route
 app.get('/health', async (req, res) => {
