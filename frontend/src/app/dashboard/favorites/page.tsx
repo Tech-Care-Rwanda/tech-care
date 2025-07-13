@@ -2,20 +2,15 @@
 
 import { useState } from "react"
 import { 
-  Heart,
-  Star,
-  MapPin,
-  Phone,
-  MessageSquare,
-  Calendar,
-  Filter,
+  Heart, 
+  Star, 
+  MapPin, 
+  Clock, 
   Search,
-  Trash2,
-  Edit,
-  Plus,
-  Clock,
-  DollarSign,
-  BookmarkX
+  Calendar,
+  ChevronRight,
+  BookmarkPlus,
+  ArrowRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -189,7 +184,7 @@ export default function FavoritesPage() {
         </div>
         
         <Button className="bg-red-500 hover:bg-red-600">
-          <Plus className="w-4 h-4 mr-2" />
+          <BookmarkPlus className="w-4 h-4 mr-2" />
           Add Category
         </Button>
       </div>
@@ -353,7 +348,7 @@ export default function FavoritesPage() {
                         onClick={() => removeFavorite(tech.id)}
                         className="text-gray-400 hover:text-red-500"
                       >
-                        <BookmarkX className="w-4 h-4" />
+                        <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
 
@@ -374,7 +369,7 @@ export default function FavoritesPage() {
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
                       <div className="flex items-center space-x-1 text-gray-600">
-                        <DollarSign className="w-3 h-3" />
+                        <Clock className="w-3 h-3" />
                         <span>RWF {tech.hourlyRate.toLocaleString()}/hr</span>
                       </div>
                       
@@ -409,15 +404,15 @@ export default function FavoritesPage() {
                       </Button>
                       
                       <Button variant="outline" size="sm">
-                        <MessageSquare className="w-4 h-4" />
+                        <ChevronRight className="w-4 h-4" />
                       </Button>
                       
                       <Button variant="outline" size="sm">
-                        <Phone className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4" />
                       </Button>
                       
                       <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4" />
+                        <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
 

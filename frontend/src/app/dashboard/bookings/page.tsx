@@ -9,7 +9,6 @@ import {
   Star, 
   Phone, 
   MessageSquare, 
-  ChevronLeft,
   MoreHorizontal,
   CheckCircle,
   XCircle,

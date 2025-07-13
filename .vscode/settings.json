@@ -1,0 +1,19 @@
+{
+  "mcp.discovery.enabled": true,
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": true,
+    "plaintext": true,
+    "markdown": true
+  },
+  "github.copilot.advanced": {
+    "authProvider": "github"
+  },
+  "files.associations": {
+    "*.env.local": "properties"
+  },
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
+} 

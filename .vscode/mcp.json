@@ -1,0 +1,36 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github_token",
+      "description": "GitHub Personal Access Token (optional - OAuth is recommended)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "description": "GitHub MCP Server for repository management and AI-powered development",
+      "tools": [
+        "create_issue",
+        "list_issues", 
+        "get_issue",
+        "update_issue",
+        "close_issue",
+        "create_pull_request",
+        "list_pull_requests",
+        "get_pull_request",
+        "merge_pull_request",
+        "list_repositories",
+        "get_repository",
+        "search_code",
+        "get_file_contents",
+        "create_branch",
+        "list_branches",
+        "get_commits",
+        "create_release",
+        "list_releases"
+      ]
+    }
+  }
+} 

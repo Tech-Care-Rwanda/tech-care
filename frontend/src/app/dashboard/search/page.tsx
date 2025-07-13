@@ -5,7 +5,6 @@ import {
   Search,
   MapPin,
   Star,
-  Filter,
   Clock,
   DollarSign,
   Bookmark,

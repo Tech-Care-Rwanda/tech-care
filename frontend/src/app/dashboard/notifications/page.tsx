@@ -5,19 +5,17 @@ import {
   Bell,
   Calendar,
   CheckCircle,
-  AlertCircle,
   Info,
   Star,
   MessageSquare,
   DollarSign,
   Trash2,
-  MarkAsUnread,
+  Mail,
   Settings,
-  Filter,
-  X
+  Filter
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
@@ -383,7 +381,7 @@ export default function NotificationsPage() {
                             onClick={() => markAsUnread(notification.id)}
                             className="text-gray-600 hover:text-gray-700"
                           >
-                            <MarkAsUnread className="w-4 h-4" />
+                            <Mail className="w-4 h-4" />
                           </Button>
                         )}
 

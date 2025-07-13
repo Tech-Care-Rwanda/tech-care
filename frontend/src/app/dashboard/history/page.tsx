@@ -3,23 +3,22 @@
 import { useState } from "react"
 import { 
   Calendar, 
-  Filter,
-  Search,
-  Star,
-  MapPin,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Download,
-  Eye,
-  MessageSquare,
-  Phone,
+  MapPin, 
+  Clock, 
+  Star, 
+  CheckCircle, 
+  XCircle, 
   RefreshCw,
-  DollarSign
+  AlertCircle,
+  Eye,
+  Download,
+  DollarSign,
+  Search,
+  MessageSquare,
+  Phone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
