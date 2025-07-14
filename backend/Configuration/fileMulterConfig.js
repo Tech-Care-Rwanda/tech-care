@@ -1,142 +1,164 @@
 const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
-const fs = require('fs');
-const req = require('express/lib/request');
 
+// Initialize Supabase client with SERVICE ROLE KEY for backend operations
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Use service key instead of anon key
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Ensure upload directories exist
-const createUploadDirectories = () => {
-    const directories = ['./uploads', './uploads/images', './uploads/certificatesdocs'];
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
 
-    directories.forEach(dir => {
-        if (!fs.existsSync(dir)){
-            fs.mkdirSync(dir, { recursive: true });
+// File filter function
+const fileFilter = (req, file, cb) => {
+    // For profile images
+    if (file.fieldname === 'profileImage') {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Profile image must be an image file'), false);
         }
-    })
-};
-
-// Create directories on module load 
-createUploadDirectories();
-
-// Configure storage for images
-const imageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './uploads/images');
-  },
-  filename: function (req, file, cb){
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-
-    cb(null,'technician' + uniqueSuffix + path.extname(file.originalname));
-
-  }
-  
-})
-
-// Configure Storage for certificates and documents
-const certificateStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "./uploads/certificatesdocs");
-    },
-
-    filename: function (req, file, cb){
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'technician' + uniqueSuffix + path.extname(file.originalname));
     }
-});
-
-
-// File filter for images
-const imageFileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-        cb(null, true);
+    // For certificate documents
+    else if (file.fieldname === 'certificateDocument') {
+        const allowedMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Certificate must be a PDF, DOC, DOCX, or image file'), false);
+        }
     }
     else {
-        cb(new Error('Only image files (jpeg, jpg, png, gif) are allowed!'), false);
+        cb(new Error('Unexpected field'), false);
     }
 };
 
-// File filter for certificate documents
-const certificateFileFilter = (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx|jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    
-   if (extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, or PNG files are allowed for certificates!'));
-  }
-};
-
-// Create upload instance for images
-const uploadImage = multer({
-    storage: imageStorage,
-    limits: {fileSize: 5 * 1024 * 1024}, // Limit to 5MB
-    fileFilter: imageFileFilter
-});
-
-
-// Create upload instance for certificates and documents
-const uploadCertificate = multer({
-    storage: certificateStorage,
-    limits: {fileSize: 10 * 1024 * 1024}, // Limit to 10MB
-    fileFilter: certificateFileFilter
-});
-
-// Create a combined upload for handling both files at once
-const uploadTechnicianFiles = multer({
-    storage: multer.diskStorage({
-        destination: function(req, file, cb) {
-            if (file.fieldname === 'profileImage') {
-                cb(null, './uploads/images');
-            } else if (file.fieldname === 'certificateDocument') {
-                cb(null, './uploads/certificatesdocs');
-            } else {
-                // Default path for any other files
-                cb(null, './uploads');
-            }
-        },
-        filename: function(req, file, cb) {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            cb(null, 'technician-' + uniqueSuffix + path.extname(file.originalname));
-        }
-    }),
+// Configure multer
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
     limits: {
-        fileSize: 10 * 1024 * 1024 // Setting a general limit of 10MB
-    },
-    fileFilter: function(req, file, cb) {
-        if (file.fieldname === 'profileImage') {
-            // For profile images, we'll check both extension and mimetype
-            const allowedTypes = /jpeg|jpg|png|gif/;
-            const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-            const mimetype = allowedTypes.test(file.mimetype);
-            
-            if (extname && mimetype) {
-                cb(null, true);
-            } else {
-                cb(new Error('Only image files (jpeg, jpg, png, gif) are allowed for profile images!'), false);
-            }
-        } else if (file.fieldname === 'certificateDocument') {
-            // For certificates, we'll just check the extension
-            const allowedTypes = /pdf|doc|docx|jpeg|jpg|png/;
-            const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-            
-            if (extname) {
-                cb(null, true);
-            } else {
-                cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, or PNG files are allowed for certificates!'), false);
-            }
-        } else {
-            cb(new Error('Unexpected field: ' + file.fieldname), false);
-        }
+        fileSize: 5 * 1024 * 1024, // 5MB limit
     }
 });
+
+// Function to upload file to Supabase
+const uploadToSupabase = async (file, bucketName, folderName = '') => {
+    try {
+        console.log(`Uploading to bucket: ${bucketName}, folder: ${folderName}`);
+        console.log(`File: ${file.originalname}, Size: ${file.size}, Type: ${file.mimetype}`);
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        const fileExtension = path.extname(file.originalname);
+        const fileName = `${timestamp}-${randomString}${fileExtension}`;
+        
+        // Create the full path
+        const filePath = folderName ? `${folderName}/${fileName}` : fileName;
+        
+        // Upload file to Supabase Storage with proper options
+        const { data, error } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false,
+                duplex: false // Add this for Node.js compatibility
+            });
+
+        if (error) {
+            console.error('Supabase upload error details:', error);
+            return {
+                success: false,
+                error: error.message,
+                details: error
+            };
+        }
+
+        console.log('Upload successful:', data);
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+
+        console.log('Generated public URL:', publicUrl);
+
+        return {
+            success: true,
+            data: data,
+            publicUrl: publicUrl,
+            fileName: filePath,
+            filePath: filePath
+        };
+
+    } catch (error) {
+        console.error('Error uploading to Supabase:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};
+
+// Function to delete file from Supabase
+const deleteFromSupabase = async (bucketName, filePath) => {
+    try {
+        const { error } = await supabase.storage
+            .from(bucketName)
+            .remove([filePath]);
+
+        if (error) {
+            console.error('Supabase delete error:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+
+        return {
+            success: true,
+            message: 'File deleted successfully'
+        };
+
+    } catch (error) {
+        console.error('Error deleting from Supabase:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};
+
+// Middleware configuration for different routes
+const uploadMiddleware = {
+    technicianFiles: upload.fields([
+        { name: 'profileImage', maxCount: 1 },
+        { name: 'certificateDocument', maxCount: 1 }
+    ]),
+    profileImage: upload.single('profileImage'),
+    certificate: upload.single('certificateDocument')
+};
+
+const uploadTechnicianFiles = upload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'certificateDocument', maxCount: 1 }
+]);
 
 module.exports = {
-    uploadImage,
-    uploadCertificate,
-    uploadTechnicianFiles
-}
+    uploadToSupabase,
+    deleteFromSupabase,
+    uploadMiddleware,
+    uploadTechnicianFiles,
+    upload,
+    supabase
+};
