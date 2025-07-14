@@ -750,7 +750,7 @@ const PromoteCustomerToAdmin = async (req, res) => {
 
     const updatedCustomerDetails = await prisma.users.update({
       where: {
-        id: customerId,
+        id: parseInt(customerId),
         email: email,
         role: 'CUSTOMER',
       },
