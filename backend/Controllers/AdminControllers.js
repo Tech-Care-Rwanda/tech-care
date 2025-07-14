@@ -1,6 +1,5 @@
 const { PrismaClient } = require('../generated/prisma');
 const emailService = require('../Configuration/EmailConfig');
-const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 
@@ -341,7 +340,7 @@ const ApproveTechnician = async (req, res) => {
         const { technicianId } = req.params;
 
         // Get optional approval message from request body
-        const { approvalMessage, adminNotes } = req.body;
+        const { approvalMessage } = req.body;
 
         // Validate technician ID
         if (!technicianId) {
@@ -427,7 +426,7 @@ const ApproveTechnician = async (req, res) => {
         try {
             const approvalEmailHtml = `
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -665,7 +664,7 @@ const RejectTechnician = async(req, res) => {
         try {
             const rejectionEmailHtml = `
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
