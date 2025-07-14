@@ -42,8 +42,24 @@ model User {
 
   // Relations
   technicianDetails TechnicianDetails?
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// Password Reset Token model
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  // Foreign key relationship
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("password_reset_tokens")
 }
 
 // Supporting  Technician Details model

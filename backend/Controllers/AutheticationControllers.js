@@ -400,7 +400,7 @@ const Login = async (req, res) => {
                   }
 
                   // Check technician approval status
-                  if (user.technicianDetails.approvalStatus !== 'PENDING'){
+                  if (user.technicianDetails.approvalStatus === 'PENDING'){
                         return res.status(403).json({
                             message: 'Your technician account is not approved . Please wait for approval before logging in'
                         })
@@ -414,7 +414,7 @@ const Login = async (req, res) => {
 
                   if (user.technicianDetails.approvalStatus !== 'APPROVED') {
                     return res.status(403).json({ 
-                        message: 'Your technician account is not approved. Please contact support.' 
+                        message: 'Your technician account is not approved. Please wait  the  admin  to  approve  them  please ' 
                     });
                 }
 
