@@ -29,7 +29,7 @@ enum TechnicianApprovalStatus {
 }
 
 //Main user model
-model User {
+model Users {
   id          Int       @id @default(autoincrement())
   fullName    String
   phoneNumber String
@@ -57,7 +57,7 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
   
   // Foreign key relationship
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("password_reset_tokens")
 }
@@ -80,7 +80,7 @@ model TechnicianDetails {
   updatedAt       DateTime @updatedAt
   
   // Foreign key relationship
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("TechnicianDetails")
 }

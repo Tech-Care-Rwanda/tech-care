@@ -24,7 +24,7 @@ const verifyToken  = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
         // find user in  database
-        const user = await prisma.user.findUnique( {
+        const user = await prisma.users.findUnique( {
             where: {id: decoded.userId},
             include: {
                 technicianDetails: true,
@@ -85,7 +85,7 @@ const verifyCustomer = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
         // Find user in  database
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id: decoded.userId }
         })
 
@@ -147,7 +147,7 @@ const verifyCustomer = async (req, res, next) => {
                const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
                // find user in database with technician details
-               const user = await prisma.user.findUnique({
+               const user = await prisma.users.findUnique({
                    where: { id: decoded.userId },
                    include: {
                        technicianDetails: true
@@ -240,7 +240,7 @@ const verifyCustomer = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
             // Find user in database
-            const user = await prisma.user.findUnique({
+            const user = await prisma.users.findUnique({
                 where: { id: decoded.userId }
             });
 

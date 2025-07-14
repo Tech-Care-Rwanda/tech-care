@@ -8,7 +8,7 @@ const { token } = require('morgan');
 const prisma = new PrismaClient();
 // Load  environment variables
 dotenv.config();
-
+prisma.$connect()
 //Customer SignUp or Admin Controllers
 const  CustomerOrAdminSignUp = async (req, res) => {
     try {
@@ -21,7 +21,7 @@ const  CustomerOrAdminSignUp = async (req, res) => {
         }
 
         // Check  if  user already  exist
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await prisma.users.findUnique({
             where: {
                 email
             }
@@ -34,7 +34,7 @@ const  CustomerOrAdminSignUp = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         //Create the new User
-        const newUser = await prisma.user.create({
+        const newUser = await prisma.users.create({
             data: {
                 fullName, 
                 email,
@@ -187,7 +187,7 @@ const TechnicianSignUp = async (req, res) => {
         }
 
         // Check if user with email already exists
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await prisma.users.findUnique({
             where: { email }
         });
 
@@ -209,7 +209,7 @@ const TechnicianSignUp = async (req, res) => {
         // Create new user with technician details in a transaction
         const newTechnician = await prisma.$transaction(async (tx) => {
             // Create user first
-            const user = await tx.user.create({
+            const user = await tx.users.create({
                 data: {
                     fullName,
                     email,
@@ -354,7 +354,7 @@ const Login = async (req, res) => {
         }
 
         // Find user by email in database with technician details
-        const user  = await prisma.user.findUnique({
+        const user  = await prisma.users.findUnique({
             where: {email},
 
             include: {
