@@ -16,7 +16,7 @@ const getCustomerProfile = async (req, res) => {
       const customerId = req.user.id;
 
       //Fetch complete customer profile from database
-      const customer = await prisma.user.findUnique({
+      const customer = await prisma.users.findUnique({
          where: {
             id: customerId,
             role: 'CUSTOMER'
@@ -79,7 +79,7 @@ const getCustomerProfile = async (req, res) => {
              const customerId = req.user.id;
 
              // Double-check user exist in  database and  is still active
-             const customer = await prisma.user.findUnique({
+             const customer = await prisma.users.findUnique({
                   where: {
                       id : customerId,
                       role: 'CUSTOMER'
@@ -187,7 +187,7 @@ const requestForForgetPassword = async(req, res) => {
         }
 
         // Find customer by email
-        const customer = await prisma.user.findUnique({
+        const customer = await prisma.users.findUnique({
             where: { 
                 email: email.toLowerCase().trim(),
                 role: 'CUSTOMER'
@@ -566,7 +566,7 @@ const changePassword = async(req, res) => {
         }
 
         // Get current customer with password
-        const customer = await prisma.user.findUnique({
+        const customer = await prisma.users.findUnique({
             where: { 
                 id: customerId,
                 role: 'CUSTOMER'
@@ -601,7 +601,7 @@ const changePassword = async(req, res) => {
         const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
         // Update password
-        await prisma.user.update({
+        await prisma.users.update({
             where: { id: customerId },
             data: { 
                 password: hashedNewPassword,

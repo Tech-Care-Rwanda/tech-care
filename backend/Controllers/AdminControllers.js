@@ -13,7 +13,7 @@ const getAdminProfile = async (req, res) => {
     const adminId = req.user.id;
 
     // Fetching the  admin profile from database
-    const admin = await prisma.user.findUnique(
+    const admin = await prisma.users.findUnique(
       {
         where: {
           id: adminId,
@@ -82,7 +82,7 @@ const checkingIfAdminIsAutheticated = async (req, res) => {
     const adminId = req.user.id;
 
     // Double-check admin exists in database and is still active
-    const admin = await prisma.user.findUnique({
+    const admin = await prisma.users.findUnique({
       where: {
         id: adminId,
         role: 'ADMIN'
@@ -177,7 +177,7 @@ const getAllTechnicians = async (req, res) => {
     }
 
     // Fetching all technicians from the database with their details
-    const technicians = await prisma.user.findMany({
+    const technicians = await prisma.users.findMany({
       where: whereConditions,
       select: {
         id: true,
@@ -245,7 +245,7 @@ const getAllTechnicians = async (req, res) => {
     }
 
     // Get total count for pagination
-    const totalTechnicians = await prisma.user.count({
+    const totalTechnicians = await prisma.users.count({
       where: whereConditions
     });
 
@@ -349,7 +349,7 @@ const ApproveTechnician = async (req, res) => {
     }
 
     // Check if technician exists and get their details
-    const technician = await prisma.user.findUnique({
+    const technician = await prisma.users.findUnique({
       where: {
         id: parseInt(technicianId),
         role: 'TECHNICIAN'
@@ -494,7 +494,7 @@ const RejectTechnician = async (req, res) => {
     }
 
     // Check if technician exists and get their details
-    const technician = await prisma.user.findUnique({
+    const technician = await prisma.users.findUnique({
       where: {
         id: parseInt(technicianId),
         role: 'TECHNICIAN'
@@ -648,7 +648,7 @@ const getTechnicianDetails = async (req, res) => {
     }
 
     // Fetch technician information from database
-    const technician = await prisma.user.findUnique({
+    const technician = await prisma.users.findUnique({
       where: {
         id: parseInt(technicianId),
         role: 'TECHNICIAN'
@@ -720,7 +720,7 @@ const PromoteCustomerToAdmin = async (req, res) => {
     }
 
     // Check if customer exists and get their details
-    const customer = await prisma.user.findUnique({
+    const customer = await prisma.users.findUnique({
       where: {
         id: parseInt(customerId),
         email: email,
@@ -748,7 +748,7 @@ const PromoteCustomerToAdmin = async (req, res) => {
       });
     }
 
-    const updatedCustomerDetails = await prisma.user.update({
+    const updatedCustomerDetails = await prisma.users.update({
       where: {
         id: customerId,
         email: email,
