@@ -11,13 +11,13 @@ const getAdminProfile = async (req, res) => {
         // the  user information  is  alrady  attached to  req.user by  the  verufication  middleware
         const adminId = req.user.id;
 
-        // Fetching the  admin profile from database 
+        // Fetching the  admin profile from database
         const admin = await prisma.user.findUnique(
             {
                 where: {
                     id: adminId,
                     role: 'ADMIN'
-                }, 
+                },
                 select: {
                      id: true,
                    fullName: true,
@@ -27,7 +27,7 @@ const getAdminProfile = async (req, res) => {
                    isActive: true,
                    createdAt: true,
                    updatedAt: true
-                    
+
                 }
             }
         );
@@ -41,7 +41,7 @@ const getAdminProfile = async (req, res) => {
             )
         }
 
-        // Checking if admin account  is  active 
+        // Checking if admin account  is  active
         if (!admin.isActive) {
             return res.status(403).json(
                 {
@@ -78,7 +78,7 @@ const getAdminProfile = async (req, res) => {
 // Checking  if  admin  is autheticated
 const checkingIfAdminIsAutheticated = async(req, res) => {
        try {
-           
+
             const adminId = req.user.id;
 
             // Double-check admin exists in database and is still active
@@ -86,7 +86,7 @@ const checkingIfAdminIsAutheticated = async(req, res) => {
                 where : {
                     id : adminId,
                     role: 'ADMIN'
-                }, 
+                },
                 select : {
                     id: true,
                     fullName: true,
@@ -136,7 +136,7 @@ const checkingIfAdminIsAutheticated = async(req, res) => {
             },
             sessionStatus: 'active'
         });
-          
+
        }
        catch(err){
          console.log('Error in checkingIfAdminIsAutheticated:', err);
@@ -155,17 +155,17 @@ const checkingIfAdminIsAutheticated = async(req, res) => {
 // getting all technician 
 const getAllTechnicians = async (req, res) => {
     try {
-        // get query parameters for filtering and pagination 
-        const { 
-            page = 1, 
-            limit = 10, 
-            status, 
-            approvalStatus, 
+        // get query parameters for filtering and pagination
+        const {
+            page = 1,
+            limit = 10,
+            status,
+            approvalStatus,
             search,
-            isAvailable 
+            isAvailable
         } = req.query;
-      
-        // Calculate offset for pagination 
+
+        // Calculate offset for pagination
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
         // Build where conditions
@@ -210,7 +210,7 @@ const getAllTechnicians = async (req, res) => {
                         updatedAt: true
                     }
                 }
-            }, 
+            },
 
             skip: offset,
             take: parseInt(limit),
@@ -223,25 +223,25 @@ const getAllTechnicians = async (req, res) => {
         let filteredTechnicians = technicians;
         if (search) {
             const searchTerm = search.toLowerCase();
-            filteredTechnicians = technicians.filter(tech => 
+            filteredTechnicians = technicians.filter(tech =>
                 tech.fullName.toLowerCase().includes(searchTerm) ||
                 tech.email.toLowerCase().includes(searchTerm) ||
-                (tech.technicianDetails?.specialization && 
+                (tech.technicianDetails?.specialization &&
                  tech.technicianDetails.specialization.toLowerCase().includes(searchTerm))
             );
         }
 
-        // Filter by approval status if provided 
+        // Filter by approval status if provided
         if (approvalStatus) {
-            filteredTechnicians = filteredTechnicians.filter(tech => 
+            filteredTechnicians = filteredTechnicians.filter(tech =>
                 tech.technicianDetails?.approvalStatus === approvalStatus.toUpperCase()
             );
         }
-       
+
         // Filter by availability if provided
         if (isAvailable !== undefined) {
             const availabilityFilter = isAvailable === 'true';
-            filteredTechnicians = filteredTechnicians.filter(tech => 
+            filteredTechnicians = filteredTechnicians.filter(tech =>
                 tech.technicianDetails?.isAvailable === availabilityFilter
             );
         }
@@ -339,7 +339,7 @@ const ApproveTechnician = async (req, res) => {
     try {
         // Get technician ID from request parameters
         const { technicianId } = req.params;
-        
+
         // Get optional approval message from request body
         const { approvalMessage, adminNotes } = req.body;
 
@@ -395,7 +395,7 @@ const ApproveTechnician = async (req, res) => {
 
         // Check current approval status
         const currentStatus = technician.technicianDetails.approvalStatus;
-        
+
         if (currentStatus === 'APPROVED') {
             return res.status(400).json({
                 message: 'Technician is already approved',
@@ -575,7 +575,7 @@ const RejectTechnician = async(req, res) => {
     try {
         // Get technician ID from request parameters
         const { technicianId } = req.params;
-        
+
         // Get optional rejection reason and admin notes from request body
         const { rejectionReason, adminNotes, feedback } = req.body;
 
@@ -626,7 +626,7 @@ const RejectTechnician = async(req, res) => {
 
         // Check current approval status
         const currentStatus = technician.technicianDetails.approvalStatus;
-        
+
         if (currentStatus === 'REJECTED') {
             return res.status(400).json({
                 message: 'Technician has already been rejected',
@@ -868,7 +868,7 @@ const getTechnicianDetails = async (req, res) => {
                 isActive: true,
                 createdAt: true,
                 updatedAt: true,
-                
+
                 // Include technician details
                 technicianDetails: {
                     select: {
@@ -911,18 +911,88 @@ const getTechnicianDetails = async (req, res) => {
     }
 };
 
+// Promote customer know to admin
+const PromoteCustomerToAdmin = async (req, res) => {
+    try {
+        // Get customer ID from request parameters
+        const { customerId } = req.params;
+        const { email } = req.body;
+
+        // Validate customer ID
+        if (!customerId || !email) {
+            return res.status(400).json({
+                message: 'Customer ID and email are required'
+            });
+        }
+
+        // Check if customer exists and get their details
+        const customer = await prisma.user.findUnique({
+            where: {
+                id: parseInt(customerId),
+                email: email,
+                role: 'CUSTOMER',
+            },
+            select: {
+                id: true,
+                email: true,
+                isActive: true,
+                role: true,
+            }
+        });
+
+        // Check if customer exists
+        if (!customer) {
+            return res.status(404).json({
+                message: 'Customer not found'
+            });
+        }
+
+        // Check if customer account is active
+        if (!customer.isActive) {
+            return res.status(403).json({
+                message: 'Cannot promote an inactive customer account'
+            });
+        }
+
+        const updatedCustomerDetails = await prisma.user.update({
+            where: {
+                id: customerId,
+                email: email,
+                role: 'CUSTOMER',
+            },
+            data: {
+                role: 'ADMIN',
+                updatedAt: new Date()
+            },
+            omit: {
+                password: true,
+            }
+        });
+
+        return res.status(200).json({
+            message: 'Customer promoted to Admin successfully',
+            data: updatedCustomerDetails,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: 'Internal server error'
+        });
+    }
+}
+
 
 // Logout  Method
 const  Logout = async (req, res) => {
     try {
-      
+
         return res.status(200).json({
             message: 'Logout successful'
         });
     }
     catch(err) {
         console.log("Internal Server  error ")
-        
+
         return res.status(500).json({
             message: 'Internal server error'
         });
@@ -936,12 +1006,13 @@ const  Logout = async (req, res) => {
 
 
 module.exports = {
-    getAdminProfile, 
+    getAdminProfile,
     checkingIfAdminIsAutheticated,
     getAllTechnicians,
-    ApproveTechnician, 
-    RejectTechnician, 
+    ApproveTechnician,
+    RejectTechnician,
     getTechnicianDetails,
+    PromoteCustomerToAdmin,
     Logout
 };
 

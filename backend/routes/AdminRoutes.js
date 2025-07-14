@@ -6,7 +6,8 @@ const {getAdminProfile,
     ApproveTechnician,
     RejectTechnician,
     getTechnicianDetails, 
-    Logout} = require('../Controllers/AdminControllers');
+    Logout, PromoteCustomerToAdmin
+} = require('../Controllers/AdminControllers');
 const router = express.Router();
 
 
@@ -27,6 +28,9 @@ router.put('/technicians/:technicianId/reject', verifyAdmin, RejectTechnician);
 
 // Route to  get  Technician  Details
 router.get('/technicians/:technicianId', verifyAdmin, getTechnicianDetails);
+
+// Route  to promote Customer to Admin
+router.put('/customer-to-admin/:customerId', verifyAdmin,  PromoteCustomerToAdmin)
 
 // Route to  Logout
 router.get('/logout', verifyAdmin, Logout);
