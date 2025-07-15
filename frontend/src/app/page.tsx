@@ -2,41 +2,52 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search } from "lucide-react"
+import { Search, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { useState, useEffect } from "react"
+import { Header } from "@/components/layout/header"
+import { LocationMapPicker } from "@/components/maps"
 
 export default function Home() {
   const router = useRouter()
   const { setSearchFilters, setIsLoading } = useSearch()
   const [searchData, setSearchData] = useState({
     location: 'Kigali',
+    coordinates: { lat: -1.9441, lng: 30.0619 },
     serviceType: 'Computer',
     urgency: 'Today',
     details: '2 devices'
   })
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [showServiceDropdown, setShowServiceDropdown] = useState(false)
   const [showUrgencyDropdown, setShowUrgencyDropdown] = useState(false)
 
   // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowLocationDropdown(false)
-      setShowServiceDropdown(false)
-      setShowUrgencyDropdown(false)
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-search-dropdown]')) {
+        setShowServiceDropdown(false)
+        setShowUrgencyDropdown(false)
+      }
     }
 
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  const locations = ['Kigali', 'Huye', 'Musanze', 'Rubavu', 'Nyagatare']
   const serviceTypes = ['Computer', 'Mobile Device', 'Network/WiFi', 'Software', 'All Services']
   const urgencyOptions = ['Today', 'Tomorrow', 'This Week', 'Flexible']
+
+  const handleLocationChange = (location: string, coordinates?: { lat: number; lng: number }) => {
+    setSearchData(prev => ({
+      ...prev,
+      location,
+      coordinates: coordinates || prev.coordinates
+    }))
+  }
 
   const handleSearch = () => {
     setIsLoading(true)
@@ -54,62 +65,38 @@ export default function Home() {
       title: "Tech support",
       description: "At your location",
       gradient: "from-green-400 to-blue-500",
-      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg"
+      image: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg",
+      serviceId: "computer"
     },
     {
       title: "Remote help",
       description: "Get Online Help from Experts",
       gradient: "from-purple-400 to-pink-500",
-      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg"
+      image: "/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg",
+      serviceId: "consultation"
     },
     {
       title: "Training",
       description: "Get trainings on proper usage",
       gradient: "from-red-400 to-pink-500",
-      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg"
+      image: "/images/sxriptx-7Kehl5idKbU-unsplash.jpg",
+      serviceId: "consultation"
     },
     {
       title: "24/7 Support",
       description: "Anytime, anywhere faster",
       gradient: "from-orange-400 to-red-500",
-      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg"
+      image: "/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg",
+      serviceId: "software"
     }
   ]
 
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TC</span>
-            </div>
-            <span className="text-white font-semibold text-lg sm:text-xl">TechCare</span>
-          </div>
-          
-          <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-            <Link href="/services" className="text-white hover:text-gray-200 transition-colors">Services</Link>
-            <Link href="/technicians" className="text-white hover:text-gray-200 transition-colors">Technicians</Link>
-            <Link href="/learn" className="text-white hover:text-gray-200 transition-colors">Learn</Link>
-          </nav>
-          
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Button variant="ghost" className="hidden sm:flex text-white hover:bg-white/10 text-sm px-3 py-2">
-              Become a Technician
-            </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-8 h-8 sm:w-10 sm:h-10">
-                🌐
-              </Button>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 w-8 h-8 sm:w-10 sm:h-10">
-                ☰
-              </Button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="absolute top-0 left-0 right-0 z-50">
+        <Header variant="transparent" />
+      </div>
 
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
@@ -126,71 +113,45 @@ export default function Home() {
         
         <div className="relative z-10 text-center space-y-6 sm:space-y-8 px-4 sm:px-6">
           {/* Search Bar */}
-          <div className="bg-white rounded-2xl sm:rounded-full p-3 sm:p-2 max-w-4xl mx-auto shadow-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-              {/* Location Dropdown */}
-              <div className="relative">
-                <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowLocationDropdown(!showLocationDropdown)
-                    setShowServiceDropdown(false)
-                    setShowUrgencyDropdown(false)
-                  }}
-                >
-                  <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Location</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.location}</p>
-                  </div>
-                </div>
-                {showLocationDropdown && (
-                  <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {locations.map((location) => (
-                      <div
-                        key={location}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSearchData({ ...searchData, location })
-                          setShowLocationDropdown(false)
-                        }}
-                      >
-                        {location}
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <div className="bg-white rounded-2xl p-4 max-w-5xl mx-auto shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Location Map Picker */}
+              <div className="md:col-span-1">
+                <LocationMapPicker
+                  selectedLocation={searchData.location}
+                  onLocationChange={handleLocationChange}
+                />
               </div>
               
               {/* Service Type Dropdown */}
-              <div className="relative">
+              <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer sm:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowServiceDropdown(!showServiceDropdown)
-                    setShowLocationDropdown(false)
                     setShowUrgencyDropdown(false)
                   }}
                 >
                   <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Service Type</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.serviceType}</p>
+                    <p className="font-semibold text-sm text-gray-900">Service Type</p>
+                    <p className="text-gray-700 text-sm">{searchData.serviceType}</p>
                   </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showServiceDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
                 </div>
                 {showServiceDropdown && (
                   <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
+                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {serviceTypes.map((service) => (
                       <div
                         key={service}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSearchData({ ...searchData, serviceType: service })
@@ -205,30 +166,34 @@ export default function Home() {
               </div>
               
               {/* Urgency Dropdown */}
-              <div className="relative">
+              <div className="relative" data-search-dropdown>
                 <div 
-                  className="flex items-center space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 cursor-pointer md:border-l border-gray-200 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowUrgencyDropdown(!showUrgencyDropdown)
-                    setShowLocationDropdown(false)
                     setShowServiceDropdown(false)
                   }}
                 >
                   <div className="text-left">
-                    <p className="font-semibold text-xs sm:text-sm text-gray-900">Urgency</p>
-                    <p className="text-gray-700 text-xs sm:text-sm">{searchData.urgency}</p>
+                    <p className="font-semibold text-sm text-gray-900">Urgency</p>
+                    <p className="text-gray-700 text-sm">{searchData.urgency}</p>
                   </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showUrgencyDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
                 </div>
                 {showUrgencyDropdown && (
                   <div 
-                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-10"
+                    className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {urgencyOptions.map((urgency) => (
                       <div
                         key={urgency}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSearchData({ ...searchData, urgency })
@@ -242,24 +207,26 @@ export default function Home() {
                 )}
               </div>
               
-              {/* Details Input */}
-              <div className="flex items-center justify-between space-x-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full hover:bg-gray-50 md:border-l border-gray-200 transition-colors">
-                <div className="flex-1 text-left">
-                  <p className="font-semibold text-xs sm:text-sm text-gray-900">Details</p>
-                  <input
-                    type="text"
-                    placeholder="Describe issue"
-                    value={searchData.details}
-                    onChange={(e) => setSearchData({ ...searchData, details: e.target.value })}
-                    className="text-gray-700 text-xs sm:text-sm bg-transparent border-none outline-none w-full"
-                  />
+              {/* Details Input and Search Button */}
+              <div className="flex items-center space-x-3">
+                <div className="flex-1 px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors h-full">
+                  <div className="text-left">
+                    <p className="font-semibold text-sm text-gray-900">Details</p>
+                    <input
+                      type="text"
+                      placeholder="Describe issue"
+                      value={searchData.details}
+                      onChange={(e) => setSearchData({ ...searchData, details: e.target.value })}
+                      className="text-gray-700 text-sm bg-transparent border-none outline-none w-full"
+                    />
+                  </div>
                 </div>
                 <Button 
                   size="icon" 
-                  className="bg-red-500 hover:bg-red-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0"
+                  className="bg-red-500 hover:bg-red-600 rounded-lg w-12 h-12 flex-shrink-0"
                   onClick={handleSearch}
                 >
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <Search className="w-5 h-5 text-white" />
                 </Button>
               </div>
             </div>
@@ -267,7 +234,7 @@ export default function Home() {
           
           <div className="space-y-8 sm:space-y-10">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight px-2">
-              Need tech help? We've got you covered.
+              Need tech help? We&apos;ve got you covered.
             </h1>
             <Button 
               className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold"
@@ -288,7 +255,11 @@ export default function Home() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {services.map((service, index) => (
-              <Card key={index} className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={handleSearch}>
+              <Card 
+                key={index} 
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group" 
+                onClick={() => router.push(`/services/${service.serviceId}`)}
+              >
                 <div className="relative h-40 sm:h-48">
                   <Image
                     src={service.image}

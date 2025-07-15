@@ -16,18 +16,17 @@ import {
   Search,
   TrendingUp,
   Shield,
-  ChevronLeft,
   Menu
 } from "lucide-react"
 import { cn, UserRole } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { Header } from "./header"
+import { useAuth } from "@/lib/contexts/AuthContext"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userType: UserRole
+  userType?: UserRole // Made optional, will use auth context
   userInfo?: {
     name: string
     email: string
@@ -39,9 +38,11 @@ interface DashboardLayoutProps {
 const navigationMenus = {
   customer: [
     { icon: Home, label: "Dashboard", href: "/dashboard" },
-    { icon: Search, label: "Find Technicians", href: "/dashboard/technicians" },
+    { icon: Search, label: "Find Technicians", href: "/dashboard/search" },
     { icon: Calendar, label: "My Bookings", href: "/dashboard/bookings" },
     { icon: FileText, label: "Service History", href: "/dashboard/history" },
+    { icon: Users, label: "Saved Technicians", href: "/dashboard/favorites" },
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
     { icon: User, label: "Profile", href: "/dashboard/profile" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings" },
   ],
@@ -68,34 +69,50 @@ const navigationMenus = {
 export function DashboardLayout({ 
   children, 
   userType,
-  userInfo = {
-    name: "John Doe",
-    email: "john@example.com",
-    status: "Active"
-  }
+  userInfo
 }: DashboardLayoutProps) {
+  const { user, isAuthenticated } = useAuth()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const pathname = usePathname()
 
-  if (!userType || userType === null) {
-    return <div>Unauthorized</div>
+  // Use auth context user role, fallback to prop
+  const effectiveUserType = user?.role || userType
+  const effectiveUserInfo = userInfo || {
+    name: user?.name || "User",
+    email: user?.email || "",
+    avatar: user?.avatar,
+    status: user?.status || "Active"
   }
 
-  const menuItems = navigationMenus[userType]
+  if (!isAuthenticated || !effectiveUserType) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-gray-600 mb-4">Please sign in to access the dashboard</p>
+          <Button asChild className="bg-red-500 hover:bg-red-600">
+            <Link href="/login">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const menuItems = navigationMenus[effectiveUserType]
 
   const UserBadge = () => (
     <div className="p-4 border-b">
       <div className="flex items-center space-x-3">
         <Avatar>
-          <AvatarImage src={userInfo.avatar} />
+          <AvatarImage src={effectiveUserInfo.avatar} />
           <AvatarFallback>
-            {userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            {effectiveUserInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{userInfo.name}</p>
-          <p className="text-xs text-muted-foreground truncate">{userInfo.email}</p>
-          <p className="text-xs text-primary capitalize">{userType}</p>
+          <p className="text-sm font-medium truncate">{effectiveUserInfo.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{effectiveUserInfo.email}</p>
+          <p className="text-xs text-red-600 capitalize font-medium">{effectiveUserType}</p>
         </div>
       </div>
     </div>
@@ -115,8 +132,8 @@ export function DashboardLayout({
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "bg-red-50 text-red-600 font-medium"
+                  : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               )}
               onClick={() => setSidebarOpen(false)}
             >
@@ -128,13 +145,15 @@ export function DashboardLayout({
       </nav>
 
       <div className="p-4 border-t">
-        <Button variant="ghost" className="w-full justify-start text-sm">
-          <Bell className="mr-2 h-4 w-4" />
-          Notifications
-          <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full px-2 py-1">
-            3
-          </span>
-        </Button>
+        <Link href="/dashboard/notifications">
+          <Button variant="ghost" className="w-full justify-start text-sm">
+            <Bell className="mr-2 h-4 w-4" />
+            Notifications
+            <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
+              3
+            </span>
+          </Button>
+        </Link>
       </div>
     </div>
   )
@@ -142,7 +161,7 @@ export function DashboardLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <Header userType={userType} />
+      <Header />
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Desktop Sidebar */}

@@ -114,7 +114,9 @@ export default function BookTechnicianPage() {
             
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TC</span>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
               </div>
               <span className="text-xl font-bold text-gray-900">TechCare</span>
             </Link>
@@ -190,10 +192,17 @@ export default function BookTechnicianPage() {
             <div className="flex items-center justify-between mb-8">
               {steps.map((step) => (
                 <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                    step.id <= currentStep ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                      step.id <= currentStep ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
+                    </div>
+                    <div className={`mt-2 text-xs text-center max-w-[80px] ${
+                      step.id <= currentStep ? 'text-red-600 font-medium' : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </div>
                   </div>
                   {step.id < steps.length && (
                     <div className={`w-12 h-1 mx-2 ${
