@@ -6,15 +6,20 @@
   "tailwind": {
     "config": "tailwind.config.ts",
     "css": "src/app/globals.css",
-    "baseColor": "blue",
+    "baseColor": "indigo",
     "cssVariables": true,
-    "prefix": ""
+    "prefix": "",
+    "darkMode":"class"
   },
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
     "ui": "@/components/ui",
     "lib": "@/lib",
-    "hooks": "@/hooks"
+    "hooks": "@/hooks",
+    "assets": "@/assets",
+    "store": "@/store",
+    "constants": "@/lib/constants",
+    "types": "@/types"
   }
 } 

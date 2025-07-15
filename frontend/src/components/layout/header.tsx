@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, X, User, LogOut, Settings, Bell } from "lucide-react"
+import { Menu, X, User, LogOut, Settings, Bell, ChevronDown } from "lucide-react"
 import { cn, UserRole, Language } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
 import { useAuth } from "@/lib/contexts/AuthContext"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 
 interface HeaderProps {
   userType?: UserRole
@@ -44,7 +45,6 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [currentLang, setCurrentLang] = React.useState<Language>("en")
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
 
   // Use auth context user role, fallback to prop
   const effectiveUserType = user?.role || userType
@@ -73,43 +73,25 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
 
   const navItems = effectiveUserType ? navigationItems[effectiveUserType] : navigationItems.guest
 
-  // Close dropdowns when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest('[data-profile-dropdown]')) {
-        setIsProfileDropdownOpen(false)
-      }
-    }
-
-    if (isProfileDropdownOpen) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [isProfileDropdownOpen])
-
-  // Handle escape key to close mobile menu and dropdowns
+  // Handle escape key to close mobile menu
   React.useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (isMobileMenuOpen) {
           setIsMobileMenuOpen(false)
         }
-        if (isProfileDropdownOpen) {
-          setIsProfileDropdownOpen(false)
-        }
       }
     }
 
     document.addEventListener('keydown', handleEscapeKey)
     return () => document.removeEventListener('keydown', handleEscapeKey)
-  }, [isMobileMenuOpen, isProfileDropdownOpen])
+  }, [isMobileMenuOpen])
 
   return (
     <header className={cn(
       "sticky top-0 z-50 w-full",
-      variant === "transparent" 
-        ? "bg-transparent border-none" 
+      variant === "transparent"
+        ? "bg-transparent border-none"
         : "border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
     )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -147,12 +129,12 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            {/* Language Switcher */}
-            <div className="hidden sm:flex">
+            {/* Language Switcher with Globe Icon */}
+            <div className="hidden sm:block">
               <LanguageSwitcher
                 currentLanguage={currentLang}
                 onLanguageChange={handleLanguageChange}
-                variant="dropdown"
+                variant="button"
               />
             </div>
 
@@ -165,103 +147,61 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                     3
                   </span>
                 </Button>
-                
-                <div className="relative" data-profile-dropdown>
-                  <button 
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors"
-                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                    aria-label="User menu"
-                    aria-expanded={isProfileDropdownOpen}
-                    aria-haspopup="menu"
-                    aria-controls="profile-dropdown-menu"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
-                      <AvatarFallback>
-                        {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="hidden lg:block">
-                      <p className={cn(
-                        "text-sm font-medium",
-                        variant === "transparent" ? "text-white" : "text-foreground"
-                      )}>{user?.name || "User"}</p>
-                      <p className={cn(
-                        "text-xs capitalize",
-                        variant === "transparent" ? "text-gray-200" : "text-muted-foreground"
-                      )}>{user?.role}</p>
-                    </div>
-                  </button>
-                  
-                  {/* Profile Dropdown */}
-                  {isProfileDropdownOpen && (
-                    <div 
-                      id="profile-dropdown-menu"
-                      className="absolute right-0 top-full mt-2 w-64 bg-background border rounded-lg shadow-lg z-[60]"
-                      role="menu"
-                      aria-labelledby="user-menu-button"
-                    >
-                      <div className="p-4 border-b">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
-                            <AvatarFallback>
-                              {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{user?.name || "User"}</p>
-                            <p className="text-sm text-muted-foreground">{user?.email || ""}</p>
-                            <p className="text-xs text-red-600 capitalize font-medium">{user?.role}</p>
-                          </div>
-                        </div>
+
+                {/* Profile Dropdown using shadcn DropdownMenu with auth integration */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2 hover:bg-accent">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
+                        <AvatarFallback>
+                          {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="hidden lg:block text-left">
+                        <p className={cn(
+                          "text-sm font-medium",
+                          variant === "transparent" ? "text-white" : "text-foreground"
+                        )}>{user?.name || "User"}</p>
+                        <p className={cn(
+                          "text-xs capitalize",
+                          variant === "transparent" ? "text-gray-200" : "text-muted-foreground"
+                        )}>{user?.role}</p>
                       </div>
-                      
-                      <div className="p-2" role="none">
-                        <Button variant="ghost" className="w-full justify-start" asChild>
-                          <Link href="/dashboard/profile" role="menuitem" onClick={() => setIsProfileDropdownOpen(false)}>
-                            <User className="mr-2 h-4 w-4" />
-                            View Profile
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start" asChild>
-                          <Link href="/dashboard" role="menuitem" onClick={() => setIsProfileDropdownOpen(false)}>
-                            <Settings className="mr-2 h-4 w-4" />
-                            Dashboard
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start" role="menuitem">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Settings
-                        </Button>
-                        <Separator className="my-2" />
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-destructive" 
-                          role="menuitem"
-                          onClick={() => {
-                            logout()
-                            setIsProfileDropdownOpen(false)
-                          }}
-                        >
-                          <LogOut className="mr-2 h-4 w-4" />
-                          Logout
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard'}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard/settings'}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               /* Guest Actions */
               <div className="flex items-center space-x-2">
-                <Button 
-                  variant="ghost" 
-                  asChild 
+                <Button
+                  variant="ghost"
+                  asChild
                   className={cn(
                     "hidden sm:inline-flex",
-                    variant === "transparent" 
-                      ? "text-white hover:bg-white/10 hover:text-white" 
+                    variant === "transparent"
+                      ? "text-white hover:bg-white/10 hover:text-white"
                       : ""
                   )}
                 >
@@ -279,8 +219,8 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
               size="icon"
               className={cn(
                 "md:hidden",
-                variant === "transparent" 
-                  ? "text-white hover:bg-white/10 hover:text-white" 
+                variant === "transparent"
+                  ? "text-white hover:bg-white/10 hover:text-white"
                   : ""
               )}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -301,12 +241,12 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
       {/* Mobile Navigation Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div 
-            className="fixed inset-0 bg-black/20" 
+          <div
+            className="fixed inset-0 bg-black/20"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          <div 
+          <div
             id="mobile-navigation"
             className="fixed right-0 top-0 h-full w-full max-w-sm bg-background p-6 shadow-lg"
             role="dialog"
@@ -324,9 +264,9 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            
+
             <Separator className="my-4" />
-            
+
             <nav className="space-y-4">
               {navItems.map((item) => (
                 <Link
@@ -338,7 +278,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
-              
+
               {!isAuthenticated && (
                 <>
                   <Separator className="my-4" />
@@ -352,7 +292,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                   </div>
                 </>
               )}
-              
+
               {isAuthenticated && (
                 <>
                   <Separator className="my-4" />
@@ -361,8 +301,8 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="w-full justify-start text-destructive"
                       onClick={() => {
                         logout()
@@ -377,7 +317,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
               )}
 
               <Separator className="my-4" />
-              
+
               {/* Mobile Language Switcher */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Language</p>

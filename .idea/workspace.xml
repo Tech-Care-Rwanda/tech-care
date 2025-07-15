@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7673fb51-6a00-44b3-90f0-6ad219463aca" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/backend/.dockerignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/HELP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/docker-compose.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/mvnw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/mvnw.cmd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/AdminAuthService/AuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/AdminAuthService/IAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/CustomerAuthService/CustomerAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/CustomerAuthService/ICustomerAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/TechnisianAuthService/ITechnicianAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/AuthService/TechnisianAuthService/TechnicianAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Controller/AdminController/AdminAuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Controller/CustomerController/CustomerAuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Controller/FileController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Controller/TechnisianController/TechnicianAuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Domain/Admin.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Domain/Customer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Domain/Technician.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/AdminTechnicianManagementDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/PasswordChangeRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/PasswordReset/ForgotPasswordRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/PasswordReset/ResetPasswordRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/Response/AdminResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/Response/ApiResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/Response/AppResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/Response/JwtResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/SignUp/AdminSignUpRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/SignUp/CustomerSignupRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/SignUp/TechnicianSignUpRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/Update/CustomerProfileUpdateRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/login/AdminLoginRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/login/CustomerLoginRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Dto/login/TechnicianLoginRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/EmailConfiguration/EmailDtos.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/EmailConfiguration/EmailService/EmailService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/EmailConfiguration/EmailService/IEmailService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Repositories/AdminRepo/AdminRepo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Repositories/CustomerRepo/CustomerRepo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Repositories/TechnicianRepo/TechnicianRepo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Services/AdminServices/ApproveService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Services/AdminServices/IApproveService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/Services/FileUploadService/FileUploadService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/TechCareRwandaApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/CustomAccessDeniedHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/CustomAuthenticationEntryPoint.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/CustomUserDetailsService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/EnvironmentConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/FileUploadConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/JwtConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/JwtProvider.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/JwtValidator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/TechCare/TechCare_Rwanda/configuration/SecurityConfiguration.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/forgot-password.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/reset-password.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/TechCare/TechCare_Rwanda/TechCareRwandaApplicationTests.java" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="2zQBnprFldssjkkH7dmRyUbDI6g" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;ft/image__doc__upload&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/prince/tech-care/backend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/backend" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="TechCareRwandaApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="TechCare-Rwanda" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.TechCare.TechCare_Rwanda.TechCareRwandaApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.25410.129" />
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-IU-251.25410.129" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7673fb51-6a00-44b3-90f0-6ad219463aca" name="Changes" comment="" />
+      <created>1751653588564</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1751653588564</updated>
+      <workItem from="1751653597528" duration="9629000" />
+      <workItem from="1751702567870" duration="4618000" />
+      <workItem from="1751711347187" duration="10380000" />
+      <workItem from="1751783966652" duration="14355000" />
+      <workItem from="1751829803454" duration="12453000" />
+      <workItem from="1751891273097" duration="11649000" />
+      <workItem from="1752052111133" duration="10267000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

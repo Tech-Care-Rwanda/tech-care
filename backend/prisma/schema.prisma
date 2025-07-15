@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for user roles
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+  CUSTOMER
+}
+
+// Enum  for technician approval status
+enum TechnicianApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+//Main user model
+model Users {
+  id          Int       @id @default(autoincrement())
+  fullName    String
+  phoneNumber String
+  email       String    @unique
+  password    String
+  role        UserRole  @default(CUSTOMER)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  technicianDetails TechnicianDetails?
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+// Password Reset Token model
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  // Foreign key relationship
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("password_reset_tokens")
+}
+
+// Supporting  Technician Details model
+model TechnicianDetails {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  gender          String
+  age             Int
+  DateOfBirth     DateTime
+  experience      String
+  specialization  String
+  imageUtl        String?
+  certificateUrl  String
+  isAvailable     Boolean  @default(true)
+  rate            Int      @default(0)
+  approvalStatus TechnicianApprovalStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Foreign key relationship
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("TechnicianDetails")
+}

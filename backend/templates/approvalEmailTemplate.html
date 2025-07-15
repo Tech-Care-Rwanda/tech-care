@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechCare - Account Approved</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #f44336;
+            padding: 20px;
+            text-align: center;
+            color: white;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px 20px;
+            border-radius: 0 0 5px 5px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .login-button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white !important;
+            padding: 12px 30px;
+            text-decoration: none !important;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Account Approved!</h1>
+    </div>
+    <div class="content">
+        <h2>Congratulations ${technician.fullName}!</h2>
+        <div class="success-message">
+            <strong>Great news!</strong> Your TechCare technician account has been approved and activated.
+        </div>
+
+        <p>You can now:</p>
+        <ul>
+            <li>Log in to your technician dashboard</li>
+            <li>Receive and accept service requests</li>
+            <li> Manage your availability status</li>
+            <li>Update your profile and specializations</li>
+        </ul>
+
+        <div style="text-align: center;">
+            <a href="http://localhost:3000/login" class="login-button">Login to Dashboard</a>
+        </div>
+
+        <p><strong>Your Specialization:</strong> ${technician.technicianDetails.specialization}</p>
+
+        ${approvalMessage}
+
+        <p>Welcome to the TechCare technician network! We're excited to have you on board.</p>
+
+        <p>If you have any questions, please don't hesitate to contact our support team.</p>
+
+        <p>Best regards,<br>The TechCare Team</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 TechCare. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
