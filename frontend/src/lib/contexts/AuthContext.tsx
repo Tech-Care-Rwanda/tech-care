@@ -2,16 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { UserRole } from '@/lib/utils'
+import { authService, User as BackendUser, CustomerSignupData, TechnicianSignupData } from '@/lib/services/authService'
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  phone?: string
+// Re-export backend User type with some frontend-specific extensions
+export interface User extends BackendUser {
+  // Frontend-specific fields for compatibility
+  name?: string
   avatar?: string
-  role: UserRole
-  status: 'active' | 'inactive' | 'pending'
-  createdAt: string
+  status?: 'active' | 'inactive' | 'pending'
   lastLogin?: string
   // Customer specific
   totalBookings?: number
@@ -30,133 +28,112 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>
-  register: (userData: RegisterData) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  customerRegister: (userData: CustomerSignupData) => Promise<{ success: boolean; error?: string }>
+  technicianRegister: (userData: TechnicianSignupData) => Promise<{ success: boolean; error?: string }>
+  logout: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
-  switchRole: (newRole: UserRole) => void // For demo purposes
-}
-
-interface RegisterData {
-  name: string
-  email: string
-  password: string
-  phone?: string
-  role: UserRole
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-// Mock users for demo
-const MOCK_USERS: User[] = [
-  {
-    id: 'customer-1',
-    name: 'John Doe',
-    email: 'john@customer.com',
-    phone: '+250 788 123 456',
-    role: 'customer',
-    status: 'active',
-    createdAt: '2024-01-15',
-    lastLogin: new Date().toISOString(),
-    totalBookings: 12,
-    completedServices: 15,
-    savedTechnicians: 8,
-    totalSpent: 125000
-  },
-  {
-    id: 'technician-1', 
-    name: 'Marie Uwimana',
-    email: 'marie@technician.com',
-    phone: '+250 788 654 321',
-    role: 'technician',
-    status: 'active',
-    createdAt: '2024-01-10',
-    lastLogin: new Date().toISOString(),
-    rating: 4.8,
-    totalJobs: 42,
-    monthlyEarnings: 85000,
-    specialties: ['Computer Repair', 'Network Setup'],
-    isAvailable: true
-  },
-  {
-    id: 'admin-1',
-    name: 'Admin User',
-    email: 'admin@techcare.com',
-    role: 'admin',
-    status: 'active',
-    createdAt: '2024-01-01',
-    lastLogin: new Date().toISOString()
-  }
-]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load user from localStorage on mount
+  // Load and validate user from localStorage on mount
   useEffect(() => {
-    const loadStoredUser = () => {
+    const initializeAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('techcare-user')
-        const storedToken = localStorage.getItem('techcare-token')
-        
+        const storedUser = authService.getStoredUser()
+        const storedToken = authService.getStoredToken()
+
         if (storedUser && storedToken) {
-          const userData = JSON.parse(storedUser)
-          // Validate stored user data
-          if (userData.id && userData.email && userData.role) {
-            setUser(userData)
+          // Verify with backend
+          const response = await authService.getCurrentUser()
+
+          if (response.success && response.data) {
+            // Transform backend user to frontend user format
+            const transformedUser: User = {
+              ...response.data,
+              id: response.data.id.toString(),
+              name: response.data.fullName,
+              phone: response.data.phoneNumber,
+              status: response.data.isActive ? 'active' : 'inactive',
+              lastLogin: new Date().toISOString(),
+              // Add role-specific defaults
+              ...(response.data.role === 'CUSTOMER' && {
+                totalBookings: 0,
+                completedServices: 0,
+                savedTechnicians: 0,
+                totalSpent: 0
+              }),
+              ...(response.data.role === 'TECHNICIAN' && {
+                rating: response.data.technicianDetails?.rate || 0,
+                totalJobs: 0,
+                monthlyEarnings: 0,
+                specialties: response.data.technicianDetails?.specialization ? [response.data.technicianDetails.specialization] : [],
+                isAvailable: response.data.technicianDetails?.isAvailable || false
+              })
+            }
+
+            setUser(transformedUser)
           } else {
-            // Invalid stored data, clear it
-            localStorage.removeItem('techcare-user')
-            localStorage.removeItem('techcare-token')
+            // Invalid/expired token, clear storage
+            await authService.logout()
           }
         }
       } catch (error) {
-        console.error('Error loading stored user:', error)
-        // Clear invalid stored data
-        localStorage.removeItem('techcare-user')
-        localStorage.removeItem('techcare-token')
+        console.error('Error initializing auth:', error)
+        await authService.logout()
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadStoredUser()
+    initializeAuth()
   }, [])
 
-  const login = async (email: string, password: string, role?: UserRole): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
-    
+
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Find user in mock data
-      let foundUser = MOCK_USERS.find(u => u.email === email)
-      
-      if (!foundUser) {
-        return { success: false, error: 'User not found' }
+      const response = await authService.login({ email, password })
+
+      if (response.success && response.data) {
+        // Transform backend user to frontend user format
+        const transformedUser: User = {
+          ...response.data.user,
+          id: response.data.user.id.toString(),
+          name: response.data.user.fullName,
+          phone: response.data.user.phoneNumber,
+          status: response.data.user.isActive ? 'active' : 'inactive',
+          lastLogin: new Date().toISOString(),
+          // Add role-specific defaults
+          ...(response.data.user.role === 'CUSTOMER' && {
+            totalBookings: 0,
+            completedServices: 0,
+            savedTechnicians: 0,
+            totalSpent: 0
+          }),
+          ...(response.data.user.role === 'TECHNICIAN' && {
+            rating: response.data.user.technicianDetails?.rate || 0,
+            totalJobs: 0,
+            monthlyEarnings: 0,
+            specialties: response.data.user.technicianDetails?.specialization ? [response.data.user.technicianDetails.specialization] : [],
+            isAvailable: response.data.user.technicianDetails?.isAvailable || false
+          })
+        }
+
+        setUser(transformedUser)
+        return { success: true }
       }
 
-      // If role specified, check if user has that role
-      if (role && foundUser.role !== role) {
-        return { success: false, error: `This email is not registered as a ${role}` }
+      return {
+        success: false,
+        error: response.error || 'Login failed. Please try again.'
       }
-
-      // Mock password validation (in real app, this would be handled by backend)
-      if (password.length < 3) {
-        return { success: false, error: 'Invalid password' }
-      }
-
-      // Update last login
-      foundUser = { ...foundUser, lastLogin: new Date().toISOString() }
-
-      // Store user data
-      setUser(foundUser)
-      localStorage.setItem('techcare-user', JSON.stringify(foundUser))
-      localStorage.setItem('techcare-token', `mock-token-${foundUser.id}`)
-      
-      return { success: true }
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, error: 'Login failed. Please try again.' }
@@ -165,109 +142,143 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const register = async (userData: RegisterData): Promise<{ success: boolean; error?: string }> => {
+  const customerRegister = async (userData: CustomerSignupData): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
-    
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Check if user already exists
-      const existingUser = MOCK_USERS.find(u => u.email === userData.email)
-      if (existingUser) {
-        return { success: false, error: 'Email already registered' }
-      }
 
-      // Create new user
-      const newUser: User = {
-        id: `${userData.role}-${Date.now()}`,
-        name: userData.name,
-        email: userData.email,
-        phone: userData.phone,
-        role: userData.role,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        // Initialize role-specific data
-        ...(userData.role === 'customer' && {
+    try {
+      const response = await authService.customerSignup(userData)
+
+      if (response.success && response.data) {
+        // Transform and set user after successful registration
+        const transformedUser: User = {
+          ...response.data.user,
+          id: response.data.user.id.toString(),
+          name: response.data.user.fullName,
+          phone: response.data.user.phoneNumber,
+          status: response.data.user.isActive ? 'active' : 'inactive',
+          lastLogin: new Date().toISOString(),
           totalBookings: 0,
-          completedServices: 0, 
+          completedServices: 0,
           savedTechnicians: 0,
           totalSpent: 0
-        }),
-        ...(userData.role === 'technician' && {
-          rating: 0,
-          totalJobs: 0,
-          monthlyEarnings: 0,
-          specialties: [],
-          isAvailable: true
-        })
+        }
+
+        setUser(transformedUser)
+        return { success: true }
       }
 
-      // Add to mock users (in real app, this would be API call)
-      MOCK_USERS.push(newUser)
-
-      // Auto-login after registration
-      setUser(newUser)
-      localStorage.setItem('techcare-user', JSON.stringify(newUser))
-      localStorage.setItem('techcare-token', `mock-token-${newUser.id}`)
-      
-      return { success: true }
+      return {
+        success: false,
+        error: response.error || 'Registration failed. Please try again.'
+      }
     } catch (error) {
-      console.error('Registration error:', error)
+      console.error('Customer registration error:', error)
       return { success: false, error: 'Registration failed. Please try again.' }
     } finally {
       setIsLoading(false)
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('techcare-user')
-    localStorage.removeItem('techcare-token')
+  const technicianRegister = async (userData: TechnicianSignupData): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true)
+
+    try {
+      const response = await authService.technicianSignup(userData)
+
+      if (response.success && response.data) {
+        // Transform and set user after successful registration
+        const transformedUser: User = {
+          ...response.data.user,
+          id: response.data.user.id.toString(),
+          name: response.data.user.fullName,
+          phone: response.data.user.phoneNumber,
+          status: response.data.user.isActive ? 'active' : 'inactive',
+          lastLogin: new Date().toISOString(),
+          rating: response.data.user.technicianDetails?.rate || 0,
+          totalJobs: 0,
+          monthlyEarnings: 0,
+          specialties: response.data.user.technicianDetails?.specialization ? [response.data.user.technicianDetails.specialization] : [],
+          isAvailable: response.data.user.technicianDetails?.isAvailable || false
+        }
+
+        setUser(transformedUser)
+        return { success: true }
+      }
+
+      return {
+        success: false,
+        error: response.error || 'Registration failed. Please try again.'
+      }
+    } catch (error) {
+      console.error('Technician registration error:', error)
+      return { success: false, error: 'Registration failed. Please try again.' }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const logout = async (): Promise<void> => {
+    setIsLoading(true)
+    try {
+      await authService.logout()
+      setUser(null)
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Clear user even if logout API fails
+      setUser(null)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const updateUser = (userData: Partial<User>) => {
     if (!user) return
-    
+
     const updatedUser = { ...user, ...userData }
     setUser(updatedUser)
+    // Update localStorage with new user data
     localStorage.setItem('techcare-user', JSON.stringify(updatedUser))
   }
 
-  const switchRole = (newRole: UserRole) => {
-    if (!user) return
-    
-    // Find or create user with new role
-    let newUser = MOCK_USERS.find(u => u.email === user.email && u.role === newRole)
-    
-    if (!newUser) {
-      // Create new user instance with different role
-      newUser = {
-        ...user,
-        id: `${newRole}-${Date.now()}`,
-        role: newRole,
-        // Reset role-specific data
-        ...(newRole === 'customer' && {
-          totalBookings: 0,
-          completedServices: 0,
-          savedTechnicians: 0,
-          totalSpent: 0
-        }),
-        ...(newRole === 'technician' && {
-          rating: 0,
-          totalJobs: 0,
-          monthlyEarnings: 0,
-          specialties: [],
-          isAvailable: true
-        })
-      }
-      MOCK_USERS.push(newUser)
-    }
+  const refreshUser = async (): Promise<void> => {
+    if (!authService.isAuthenticated()) return
 
-    setUser(newUser)
-    localStorage.setItem('techcare-user', JSON.stringify(newUser))
-    localStorage.setItem('techcare-token', `mock-token-${newUser.id}`)
+    try {
+      const response = await authService.getCurrentUser()
+
+      if (response.success && response.data) {
+        const transformedUser: User = {
+          ...response.data,
+          id: response.data.id.toString(),
+          name: response.data.fullName,
+          phone: response.data.phoneNumber,
+          status: response.data.isActive ? 'active' : 'inactive',
+          lastLogin: new Date().toISOString(),
+          // Add role-specific defaults
+          ...(response.data.role === 'CUSTOMER' && {
+            totalBookings: 0,
+            completedServices: 0,
+            savedTechnicians: 0,
+            totalSpent: 0
+          }),
+          ...(response.data.role === 'TECHNICIAN' && {
+            rating: response.data.technicianDetails?.rate || 0,
+            totalJobs: 0,
+            monthlyEarnings: 0,
+            specialties: response.data.technicianDetails?.specialization ? [response.data.technicianDetails.specialization] : [],
+            isAvailable: response.data.technicianDetails?.isAvailable || false
+          })
+        }
+
+        setUser(transformedUser)
+      } else {
+        // Invalid session, logout
+        await logout()
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error)
+      await logout()
+    }
   }
 
   const value: AuthContextType = {
@@ -275,10 +286,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isLoading,
     login,
-    register, 
+    customerRegister,
+    technicianRegister,
     logout,
     updateUser,
-    switchRole
+    refreshUser
   }
 
   return (
@@ -305,10 +317,10 @@ export function useUserRole(): UserRole {
 // Helper hook for checking specific permissions
 export function usePermissions() {
   const { user } = useAuth()
-  
+
   return {
     canCreateBookings: user?.role === 'customer',
-    canManageJobs: user?.role === 'technician', 
+    canManageJobs: user?.role === 'technician',
     canAccessAdmin: user?.role === 'admin',
     canEditProfile: !!user,
     canViewDashboard: !!user
