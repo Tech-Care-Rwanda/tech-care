@@ -28,6 +28,30 @@ enum TechnicianApprovalStatus {
   REJECTED
 }
 
+// Enum for booking status
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+// Enum for service categories
+enum ServiceCategory {
+  COMPUTER_REPAIR
+  LAPTOP_REPAIR
+  PHONE_REPAIR
+  TABLET_REPAIR
+  NETWORK_SETUP
+  SOFTWARE_INSTALLATION
+  DATA_RECOVERY
+  VIRUS_REMOVAL
+  HARDWARE_UPGRADE
+  CONSULTATION
+}
+
 //Main user model
 model Users {
   id          Int       @id @default(autoincrement())
@@ -43,6 +67,9 @@ model Users {
   // Relations
   technicianDetails TechnicianDetails?
   passwordResetTokens PasswordResetToken[]
+  customerBookings Booking[] @relation("CustomerBookings")
+  technicianBookings Booking[] @relation("TechnicianBookings")
+  technicianAvailability TechnicianAvailability[]
 
   @@map("users")
 }
@@ -83,4 +110,48 @@ model TechnicianDetails {
   user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("TechnicianDetails")
+}
+
+// Booking model
+model Booking {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  technicianId Int?
+  title       String
+  description String
+  category    ServiceCategory
+  status      BookingStatus @default(PENDING)
+  scheduledAt DateTime?
+  completedAt DateTime?
+  estimatedHours Int?
+  actualHours Int?
+  location    String
+  price       Decimal? @db.Decimal(10,2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  customer Users @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  technician Users? @relation("TechnicianBookings", fields: [technicianId], references: [id], onDelete: SetNull)
+  
+  @@map("bookings")
+}
+
+// Technician Availability model
+model TechnicianAvailability {
+  id          Int      @id @default(autoincrement())
+  technicianId Int
+  dayOfWeek   Int      // 0 = Sunday, 1 = Monday, etc.
+  startTime   String   // "09:00"
+  endTime     String   // "17:00"
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  technician Users @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@unique([technicianId, dayOfWeek])
+  @@map("technician_availability")
 }
