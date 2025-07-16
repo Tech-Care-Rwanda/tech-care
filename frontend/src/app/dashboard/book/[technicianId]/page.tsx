@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { 
@@ -9,19 +9,48 @@ import {
   MapPin, 
   Clock,
   Check,
-  CreditCard
+  CreditCard,
+  Loader2,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { useAuth } from "@/lib/contexts/AuthContext"
+import apiService from "@/lib/services/api"
+
+interface Technician {
+  id: number
+  name: string
+  image?: string
+  specialty: string
+  rating: number
+  reviews: number
+  hourlyRate: number
+  location: string
+  availability: string[]
+  services: string[]
+}
+
+interface Service {
+  id: string
+  name: string
+  price: number
+  duration: string
+}
 
 export default function BookTechnicianPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const technicianId = params.technicianId as string
   
   const [currentStep, setCurrentStep] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [technician, setTechnician] = useState<Technician | null>(null)
   const [bookingData, setBookingData] = useState({
     service: '',
     date: '',
@@ -32,26 +61,32 @@ export default function BookTechnicianPage() {
     deviceCount: 1
   })
 
-  // Mock technician data (in real app, this would be fetched)
-  const technician = {
-    id: parseInt(technicianId),
-    name: technicianId === "1" ? "John Mugisha" : "Marie Uwimana",
-    image: technicianId === "1" ? "/images/thisisengineering-hnXf73-K1zo-unsplash.jpg" : "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg",
-    specialty: technicianId === "1" ? "Computer Specialist" : "Network Expert",
-    rating: 5.0,
-    reviews: 318,
-    hourlyRate: technicianId === "1" ? 15000 : 12000,
-    location: "Kigali",
-    availability: ["Today", "Tomorrow", "This Weekend"],
-    services: [
-      "Computer Setup & Configuration",
-      "Network Installation",
-      "Hardware Repair",
-      "Software Installation",
-      "Data Recovery",
-      "System Optimization"
-    ]
-  }
+  // Fetch technician data
+  useEffect(() => {
+    async function fetchTechnician() {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await apiService.technician.getTechnician(technicianId)
+        
+        if (response.success && response.data) {
+          setTechnician(response.data)
+        } else {
+          setError('Failed to load technician data')
+        }
+      } catch (err) {
+        console.error('Error fetching technician:', err)
+        setError('Failed to load technician data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (technicianId) {
+      fetchTechnician()
+    }
+  }, [technicianId])
 
   const steps = [
     { id: 1, title: "Service Details", description: "What do you need help with?" },
@@ -60,7 +95,7 @@ export default function BookTechnicianPage() {
     { id: 4, title: "Review & Confirm", description: "Review your booking details" }
   ]
 
-  const services = [
+  const services: Service[] = [
     { id: "computer-setup", name: "Computer Setup & Configuration", price: 15000, duration: "2-3 hours" },
     { id: "network-install", name: "Network Installation", price: 12000, duration: "1-2 hours" },
     { id: "hardware-repair", name: "Hardware Repair", price: 10000, duration: "1-2 hours" },
@@ -99,39 +134,48 @@ export default function BookTechnicianPage() {
     router.push('/dashboard/bookings?new=true')
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Link href="/search-results" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-                <ChevronLeft className="w-5 h-5" />
-                <span>Back to Search</span>
-              </Link>
-            </div>
-            
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <div className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder-avatar.jpg" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-            </div>
+  // Show loading state
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading technician information...</p>
           </div>
         </div>
-      </header>
+      </DashboardLayout>
+    )
+  }
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  // Show error state
+  if (error || !technician) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+            <p className="text-gray-900 font-medium mb-2">Error Loading Technician</p>
+            <p className="text-gray-600 mb-4">{error || 'Technician not found'}</p>
+            <Button onClick={() => router.push('/dashboard/search')}>
+              Back to Search
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-5xl mx-auto">
+        {/* Back Navigation */}
+        <div className="mb-6">
+          <Link href="/dashboard/search" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+            <ChevronLeft className="w-5 h-5" />
+            <span>Back to Search</span>
+          </Link>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Technician Info Sidebar */}
           <div className="lg:col-span-1">
@@ -414,6 +458,6 @@ export default function BookTechnicianPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   )
 } 

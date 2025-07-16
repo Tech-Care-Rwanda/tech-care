@@ -20,20 +20,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
+import { DashboardLayout } from "@/components/layout/dashboard-layout"
 
 export default function CustomerDashboard() {
   const router = useRouter()
-  const [activeSection, setActiveSection] = useState("overview")
-
-  const sidebarItems = [
-    { id: "overview", label: "Overview", icon: Calendar, href: "/dashboard" },
-    { id: "bookings", label: "My Bookings", icon: Calendar, href: "/dashboard/bookings" },
-    { id: "search", label: "Search History", icon: Search, href: "/dashboard/search" },
-    { id: "favorites", label: "Saved Technicians", icon: Heart, href: "/dashboard/favorites" },
-    { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile" },
-    { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
-    { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
-  ]
 
   const upcomingBookings = [
     {
@@ -84,119 +74,42 @@ export default function CustomerDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="text-red-500 hover:text-red-600">
-                Become a Technician
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
-                    2
-                  </span>
-                </Button>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-avatar.jpg" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-          </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-red-500 to-pink-600 rounded-xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">Welcome back, John!</h1>
+          <p className="text-red-100 mb-4">Ready to get tech help? Search for technicians or manage your bookings.</p>
+          <Button 
+            className="bg-white text-red-600 hover:bg-gray-100"
+            onClick={() => router.push('/dashboard/search')}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Find Technicians
+          </Button>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">John Doe</h3>
-                    <p className="text-sm text-gray-500">Customer since 2024</p>
-                  </div>
-                </div>
-                
-                <nav className="space-y-1">
-                  {sidebarItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = activeSection === item.id
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isActive 
-                            ? "bg-red-50 text-red-600 font-medium" 
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                        onClick={() => setActiveSection(item.id)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    )
-                  })}
-                </nav>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Welcome Section */}
-            <div className="bg-gradient-to-r from-red-500 to-pink-600 rounded-xl p-6 text-white">
-              <h1 className="text-2xl font-bold mb-2">Welcome back, John!</h1>
-              <p className="text-red-100 mb-4">Ready to get tech help? Search for technicians or manage your bookings.</p>
-              <Button 
-                className="bg-white text-red-600 hover:bg-gray-100"
-                onClick={() => router.push('/search-results')}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Find Technicians
-              </Button>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-2xl font-bold text-gray-900">2</div>
-                  <div className="text-sm text-gray-500">Upcoming Bookings</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-2xl font-bold text-gray-900">7</div>
-                  <div className="text-sm text-gray-500">Completed Services</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-2xl font-bold text-gray-900">2</div>
-                  <div className="text-sm text-gray-500">Saved Technicians</div>
-                </CardContent>
-              </Card>
-            </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-gray-900">2</div>
+              <div className="text-sm text-gray-500">Upcoming Bookings</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-gray-900">7</div>
+              <div className="text-sm text-gray-500">Completed Services</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-gray-900">2</div>
+              <div className="text-sm text-gray-500">Saved Technicians</div>
+            </CardContent>
+          </Card>
+        </div>
 
             {/* Upcoming Bookings */}
             <Card>
@@ -306,8 +219,6 @@ export default function CustomerDashboard() {
               </Card>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-} 
+      </DashboardLayout>
+    )
+  } 

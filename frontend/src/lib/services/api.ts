@@ -398,6 +398,26 @@ export class AdminService {
 }
 
 /**
+ * Technician Service
+ * Handles public technician-related operations
+ */
+export class TechnicianService {
+  constructor(private api: ApiClient) {}
+
+  async getTechnician(technicianId: string): Promise<ApiResponse<Technician>> {
+    return this.api.get<Technician>(`/api/v1/technicians/${technicianId}`);
+  }
+
+  async getAvailableTechnicians(): Promise<ApiResponse<Technician[]>> {
+    return this.api.get<Technician[]>('/api/v1/technicians');
+  }
+
+  async getTechnicianSchedule(technicianId: string): Promise<ApiResponse<any>> {
+    return this.api.get<any>(`/api/v1/technicians/${technicianId}/schedule`);
+  }
+}
+
+/**
  * Main API Service Instance
  */
 class TechCareApiService {
@@ -406,6 +426,7 @@ class TechCareApiService {
   public auth: AuthService;
   public customer: CustomerService;
   public admin: AdminService;
+  public technician: TechnicianService;
 
   constructor() {
     this.apiClient = new ApiClient();
@@ -413,6 +434,7 @@ class TechCareApiService {
     this.auth = new AuthService(this.apiClient);
     this.customer = new CustomerService(this.apiClient);
     this.admin = new AdminService(this.apiClient);
+    this.technician = new TechnicianService(this.apiClient);
   }
 
   /**

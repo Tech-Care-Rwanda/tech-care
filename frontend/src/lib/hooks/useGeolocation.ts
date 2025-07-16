@@ -89,6 +89,6 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
   return {
     ...state,
     getCurrentPosition,
-    isSupported: !!navigator.geolocation
+    isSupported: typeof window !== 'undefined' && !!navigator.geolocation
   }
 } 
