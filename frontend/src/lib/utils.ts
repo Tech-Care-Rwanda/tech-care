@@ -15,6 +15,28 @@ export const languages = {
 export type Language = keyof typeof languages
 export type UserRole = "customer" | "technician" | "admin" | null
 
+// API Role types and mapping utilities
+export type ApiRole = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN';
+
+export function apiRoleToUserRole(apiRole: ApiRole): UserRole {
+  const mapping: Record<ApiRole, UserRole> = {
+    'CUSTOMER': 'customer',
+    'TECHNICIAN': 'technician',
+    'ADMIN': 'admin',
+  };
+  return mapping[apiRole];
+}
+
+export function userRoleToApiRole(userRole: UserRole): ApiRole | null {
+  if (!userRole) return null;
+  const mapping: Record<NonNullable<UserRole>, ApiRole> = {
+    'customer': 'CUSTOMER',
+    'technician': 'TECHNICIAN',
+    'admin': 'ADMIN',
+  };
+  return mapping[userRole];
+}
+
 // Text length adjustment for different languages
 export function getTextScale(lang: Language): number {
   switch (lang) {
