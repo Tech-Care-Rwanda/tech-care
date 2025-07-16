@@ -1,4 +1,4 @@
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Create a new booking
@@ -25,10 +25,10 @@ const createBooking = async (req, res) => {
         // Validate category
         const validCategories = [
             'COMPUTER_REPAIR', 'LAPTOP_REPAIR', 'PHONE_REPAIR', 'TABLET_REPAIR',
-            'NETWORK_SETUP', 'SOFTWARE_INSTALLATION', 'DATA_RECOVERY', 
+            'NETWORK_SETUP', 'SOFTWARE_INSTALLATION', 'DATA_RECOVERY',
             'VIRUS_REMOVAL', 'HARDWARE_UPGRADE', 'CONSULTATION'
         ];
-        
+
         if (!validCategories.includes(category)) {
             return res.status(400).json({
                 message: 'Invalid service category'
@@ -390,7 +390,7 @@ const updateBookingStatus = async (req, res) => {
         const userRole = req.user.role;
 
         const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REJECTED'];
-        
+
         if (!status || !validStatuses.includes(status.toUpperCase())) {
             return res.status(400).json({
                 message: 'Invalid status'

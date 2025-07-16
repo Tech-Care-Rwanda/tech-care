@@ -6,14 +6,18 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "build": "prisma generate"
+    "build": "prisma generate && prisma migrate deploy",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^6.11.1",
+    "@prisma/client": "^6.12.0",
     "@supabase/supabase-js": "^2.50.4",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.0",
@@ -32,6 +36,6 @@
   "devDependencies": {
     "@types/node": "^24.0.13",
     "nodemon": "^3.1.10",
-    "prisma": "^6.11.1"
+    "prisma": "^6.12.0"
   }
 }
