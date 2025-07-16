@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { 
+import { useState, useEffect } from "react"
+import {
   Search,
   MapPin,
   Star,
@@ -21,24 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/lib/contexts/AuthContext"
-
-interface Technician {
-  id: string
-  name: string
-  avatar?: string
-  rating: number
-  reviewCount: number
-  specialties: string[]
-  location: string
-  hourlyRate: number
-  available: boolean
-  responseTime: string
-  completedJobs: number
-  description: string
-  verified: boolean
-  distance?: number
-  saved?: boolean
-}
+import { useSearchTechnicians, useSavedTechnicians } from "@/lib/hooks/useTechnicians"
+import { Technician, SearchFilters } from "@/lib/services/technicianService"
 
 interface SavedSearch {
   id: string
@@ -47,15 +31,6 @@ interface SavedSearch {
   filters: SearchFilters
   resultCount: number
   lastUpdated: string
-}
-
-interface SearchFilters {
-  location: string
-  specialty: string
-  priceRange: [number, number]
-  rating: number
-  availability: string
-  distance: number
 }
 
 export default function SearchPage() {
@@ -71,61 +46,17 @@ export default function SearchPage() {
     distance: 50
   })
 
-  // Mock technicians data
-  const [technicians] = useState<Technician[]>([
-    {
-      id: "1",
-      name: "Marie Uwimana",
-      avatar: "/placeholder-avatar.jpg",
-      rating: 4.8,
-      reviewCount: 42,
-      specialties: ["Computer Repair", "Network Setup", "Data Recovery"],
-      location: "Kigali City",
-      hourlyRate: 15000,
-      available: true,
-      responseTime: "< 1 hour",
-      completedJobs: 127,
-      description: "Experienced computer technician specializing in hardware repair and network configuration. 5+ years of experience.",
-      verified: true,
-      distance: 2.5,
-      saved: false
-    },
-    {
-      id: "2",
-      name: "Jean Baptiste",
-      avatar: "/placeholder-avatar.jpg",
-      rating: 4.6,
-      reviewCount: 38,
-      specialties: ["Mobile Repair", "Software Installation", "Virus Removal"],
-      location: "Nyamirambo",
-      hourlyRate: 12000,
-      available: true,
-      responseTime: "< 2 hours",
-      completedJobs: 89,
-      description: "Mobile device specialist with expertise in screen repairs, software troubleshooting, and device optimization.",
-      verified: true,
-      distance: 5.2,
-      saved: true
-    },
-    {
-      id: "3",
-      name: "David Nkusi",
-      avatar: "/placeholder-avatar.jpg",
-      rating: 4.9,
-      reviewCount: 67,
-      specialties: ["Hardware Upgrade", "Gaming Setup", "Custom Builds"],
-      location: "Remera",
-      hourlyRate: 20000,
-      available: false,
-      responseTime: "< 3 hours",
-      completedJobs: 156,
-      description: "Expert in custom computer builds and gaming setups. Certified in multiple hardware platforms.",
-      verified: true,
-      distance: 8.1
-    }
-  ])
+  // Use real technician data
+  const { technicians, loading, error, searchTechnicians } = useSearchTechnicians(filters)
+  const { savedIds, saveTechnician, unsaveTechnician, isSaved } = useSavedTechnicians()
 
-  // Mock saved searches
+  // Update technicians with saved status
+  const techniciansWithSavedStatus = technicians.map(tech => ({
+    ...tech,
+    saved: isSaved(tech.id)
+  }))
+
+  // Mock saved searches (TODO: Replace with real saved searches API)
   const [savedSearches] = useState<SavedSearch[]>([
     {
       id: "1",
@@ -161,7 +92,7 @@ export default function SearchPage() {
 
   const specialties = [
     "Computer Repair",
-    "Mobile Repair", 
+    "Mobile Repair",
     "Network Setup",
     "Data Recovery",
     "Software Installation",
@@ -180,26 +111,32 @@ export default function SearchPage() {
     "Nyarutarama"
   ]
 
-  const filteredTechnicians = technicians.filter(tech => {
-    const matchesQuery = !searchQuery || 
-      tech.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tech.specialties.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      tech.description.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter technicians based on search query
+  const filteredTechnicians = techniciansWithSavedStatus.filter(technician => {
+    if (!searchQuery.trim()) return true
 
-    const matchesLocation = !filters.location || tech.location.includes(filters.location)
-    const matchesSpecialty = !filters.specialty || tech.specialties.includes(filters.specialty)
-    const matchesPrice = tech.hourlyRate >= filters.priceRange[0] && tech.hourlyRate <= filters.priceRange[1]
-    const matchesRating = tech.rating >= filters.rating
-    const matchesAvailability = filters.availability === "any" || 
-      (filters.availability === "available" && tech.available) ||
-      (filters.availability === "busy" && !tech.available)
-    const matchesDistance = !tech.distance || tech.distance <= filters.distance
-
-    return matchesQuery && matchesLocation && matchesSpecialty && matchesPrice && 
-           matchesRating && matchesAvailability && matchesDistance
+    const query = searchQuery.toLowerCase()
+    return (
+      technician.name.toLowerCase().includes(query) ||
+      technician.specialties.some(specialty => specialty.toLowerCase().includes(query)) ||
+      technician.location.toLowerCase().includes(query) ||
+      technician.description.toLowerCase().includes(query)
+    )
   })
 
-  const resetFilters = () => {
+  const handleSaveToggle = (technicianId: string) => {
+    if (isSaved(technicianId)) {
+      unsaveTechnician(technicianId)
+    } else {
+      saveTechnician(technicianId)
+    }
+  }
+
+  const handleFilterChange = (filterType: keyof SearchFilters, value: any) => {
+    setFilters(prev => ({ ...prev, [filterType]: value }))
+  }
+
+  const clearFilters = () => {
     setFilters({
       location: "",
       specialty: "",
@@ -210,14 +147,25 @@ export default function SearchPage() {
     })
   }
 
-  const saveSearch = () => {
-    // TODO: Implement save search functionality
-    console.log("Saving search:", { searchQuery, filters })
+  const applySearch = (searchFilters: SearchFilters) => {
+    setFilters(searchFilters)
+    searchTechnicians(searchFilters)
   }
 
-  const loadSavedSearch = (savedSearch: SavedSearch) => {
-    setSearchQuery(savedSearch.query)
-    setFilters(savedSearch.filters)
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-RW', {
+      style: 'currency',
+      currency: 'RWF',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
 
   if (!user) {
@@ -232,348 +180,264 @@ export default function SearchPage() {
 
   return (
     <DashboardLayout>
-      {/* Page Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Technicians</h1>
-          <p className="text-gray-600">Search for qualified technicians in your area</p>
+          <h1 className="text-3xl font-bold text-gray-900">Find Technicians</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Search for qualified technicians in your area
+          </p>
         </div>
-      </div>
 
-      {/* Search Bar */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search for technicians, services, or specialties..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg"
-              />
+        {/* Search Bar */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  placeholder="Search by name, specialty, or location..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+              </Button>
             </div>
-            
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>Filters</span>
-            </Button>
 
-            <Button className="bg-red-500 hover:bg-red-600">
-              <Search className="w-4 h-4 mr-2" />
-              Search
-            </Button>
-          </div>
+            {/* Filters Panel */}
+            {showFilters && (
+              <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Location Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <select
+                      value={filters.location}
+                      onChange={(e) => handleFilterChange('location', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Any Location</option>
+                      {locations.map(location => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Location */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Location
-                  </label>
-                  <select
-                    value={filters.location}
-                    onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="">Any Location</option>
-                    {locations.map(location => (
-                      <option key={location} value={location}>{location}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Specialty Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialty</label>
+                    <select
+                      value={filters.specialty}
+                      onChange={(e) => handleFilterChange('specialty', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Any Specialty</option>
+                      {specialties.map(specialty => (
+                        <option key={specialty} value={specialty}>{specialty}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Specialty */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Specialty
-                  </label>
-                  <select
-                    value={filters.specialty}
-                    onChange={(e) => setFilters({ ...filters, specialty: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="">Any Specialty</option>
-                    {specialties.map(specialty => (
-                      <option key={specialty} value={specialty}>{specialty}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Rating Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Rating</label>
+                    <select
+                      value={filters.rating}
+                      onChange={(e) => handleFilterChange('rating', parseFloat(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value={0}>Any Rating</option>
+                      <option value={4}>4+ Stars</option>
+                      <option value={4.5}>4.5+ Stars</option>
+                      <option value={4.8}>4.8+ Stars</option>
+                    </select>
+                  </div>
 
-                {/* Availability */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Availability
-                  </label>
-                  <select
-                    value={filters.availability}
-                    onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="any">Any</option>
-                    <option value="available">Available Now</option>
-                    <option value="busy">Busy</option>
-                  </select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hourly Rate (RWF)
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      value={filters.priceRange[0]}
-                      onChange={(e) => setFilters({ 
-                        ...filters, 
-                        priceRange: [parseInt(e.target.value) || 0, filters.priceRange[1]]
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                    />
-                    <span>-</span>
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      value={filters.priceRange[1]}
-                      onChange={(e) => setFilters({ 
-                        ...filters, 
-                        priceRange: [filters.priceRange[0], parseInt(e.target.value) || 100000]
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                    />
+                  {/* Availability Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+                    <select
+                      value={filters.availability}
+                      onChange={(e) => handleFilterChange('availability', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="any">Any Time</option>
+                      <option value="available">Available Now</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Minimum Rating */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Minimum Rating
-                  </label>
-                  <select
-                    value={filters.rating}
-                    onChange={(e) => setFilters({ ...filters, rating: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value={0}>Any Rating</option>
-                    <option value={3}>3+ Stars</option>
-                    <option value={4}>4+ Stars</option>
-                    <option value={4.5}>4.5+ Stars</option>
-                  </select>
-                </div>
-
-                {/* Distance */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Distance (km)
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    value={filters.distance}
-                    onChange={(e) => setFilters({ ...filters, distance: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
-                  <span className="text-sm text-gray-500">{filters.distance} km</span>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="outline" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
+                  <Button onClick={() => setShowFilters(false)}>
+                    Apply Filters
+                  </Button>
                 </div>
               </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <div className="flex justify-between items-center mt-4">
-                <Button variant="outline" onClick={resetFilters}>
-                  <X className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-
-                <Button onClick={saveSearch} className="bg-red-500 hover:bg-red-600">
-                  <BookmarkPlus className="w-4 h-4 mr-2" />
-                  Save Search
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar - Saved Searches */}
-        <div className="lg:col-span-1">
+        {/* Saved Searches */}
+        {savedSearches.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Saved Searches</CardTitle>
+              <CardTitle>Saved Searches</CardTitle>
             </CardHeader>
             <CardContent>
-              {savedSearches.length === 0 ? (
-                <p className="text-sm text-gray-500">No saved searches yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {savedSearches.map(saved => (
-                    <div
-                      key={saved.id}
-                      className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => loadSavedSearch(saved)}
-                    >
-                      <h4 className="font-medium text-sm text-gray-900">{saved.name}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{saved.resultCount} results</p>
-                      <p className="text-xs text-gray-400">{saved.lastUpdated}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedSearches.map((search) => (
+                  <div key={search.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    onClick={() => applySearch(search.filters)}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{search.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{search.resultCount} results</p>
+                        <p className="text-xs text-gray-400 mt-1">Updated {formatDate(search.lastUpdated)}</p>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
         {/* Results */}
-        <div className="lg:col-span-3">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {filteredTechnicians.length} technicians found
-            </h2>
-            
-            <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-              <option>Sort by Rating</option>
-              <option>Sort by Price (Low to High)</option>
-              <option>Sort by Price (High to Low)</option>
-              <option>Sort by Distance</option>
-              <option>Sort by Availability</option>
-            </select>
-          </div>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {loading ? 'Loading...' : `${filteredTechnicians.length} Technicians Found`}
+          </h2>
+          {error && (
+            <p className="text-red-600 text-sm">
+              Error loading data. Showing fallback results.
+            </p>
+          )}
+        </div>
 
-          {filteredTechnicians.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="text-gray-400 mb-4">
-                  <Search className="w-12 h-12 mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No technicians found</h3>
-                <p className="text-gray-600">Try adjusting your search criteria or filters</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredTechnicians.map((tech) => (
-                <Card key={tech.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                      {/* Avatar */}
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={tech.avatar} />
-                        <AvatarFallback>
-                          {tech.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+        {/* Technician Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredTechnicians.map((technician) => (
+            <Card key={technician.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={technician.avatar} alt={technician.name} />
+                    <AvatarFallback>{technician.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="text-lg font-semibold text-gray-900">{tech.name}</h3>
-                              {tech.verified && (
-                                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                                  Verified
-                                </Badge>
-                              )}
-                              {tech.available ? (
-                                <Badge className="bg-green-100 text-green-800 border-green-200">
-                                  Available
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">
-                                  Busy
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                              <div className="flex items-center space-x-1">
-                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                <span>{tech.rating}</span>
-                                <span>({tech.reviewCount} reviews)</span>
-                              </div>
-                              
-                              <div className="flex items-center space-x-1">
-                                <MapPin className="w-4 h-4" />
-                                <span>{tech.location}</span>
-                                {tech.distance && (
-                                  <span>• {tech.distance} km away</span>
-                                )}
-                              </div>
-                            </div>
-
-                            <p className="text-gray-700 mb-3">{tech.description}</p>
-
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {tech.specialties.map((specialty, index) => (
-                                <Badge key={index} variant="outline" className="border-red-200 text-red-600 bg-red-50">
-                                  {specialty}
-                                </Badge>
-                              ))}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                <div className="flex items-center space-x-1">
-                                  <DollarSign className="w-4 h-4" />
-                                  <span>RWF {tech.hourlyRate.toLocaleString()}/hour</span>
-                                </div>
-                                
-                                <div className="flex items-center space-x-1">
-                                  <Clock className="w-4 h-4" />
-                                  <span>Responds {tech.responseTime}</span>
-                                </div>
-                                
-                                <span>{tech.completedJobs} jobs completed</span>
-                              </div>
-                            </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          {technician.name}
+                          {technician.verified && (
+                            <Badge variant="secondary" className="text-xs">Verified</Badge>
+                          )}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm font-medium ml-1">{technician.rating}</span>
+                            <span className="text-sm text-gray-500 ml-1">({technician.reviewCount})</span>
                           </div>
+                          <Badge variant={technician.available ? "default" : "secondary"}>
+                            {technician.available ? "Available" : "Busy"}
+                          </Badge>
+                        </div>
+                      </div>
 
-                          {/* Actions */}
-                          <div className="flex flex-col space-y-2 ml-4">
-                            <Button className="bg-red-500 hover:bg-red-600">
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Book Now
-                            </Button>
-                            
-                            <div className="flex space-x-2">
-                              <Button variant="outline" size="sm">
-                                <MessageSquare className="w-4 h-4 mr-1" />
-                                Message
-                              </Button>
-                              
-                              <Button variant="outline" size="sm">
-                                <Phone className="w-4 h-4 mr-1" />
-                                Call
-                              </Button>
-                              
-                              <Button variant="outline" size="sm">
-                                {tech.saved ? (
-                                  <Bookmark className="w-4 h-4 text-red-500 fill-current" />
-                                ) : (
-                                  <Bookmark className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSaveToggle(technician.id)}
+                        className="text-gray-500 hover:text-red-500"
+                      >
+                        {technician.saved ? <Bookmark className="h-5 w-5 fill-current" /> : <BookmarkPlus className="h-5 w-5" />}
+                      </Button>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="flex flex-wrap gap-2">
+                        {technician.specialties.map((specialty, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {specialty}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mt-3 line-clamp-2">
+                      {technician.description}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{technician.location}</span>
+                          {technician.distance && <span>• {technician.distance}km</span>}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{technician.responseTime}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-gray-900">
+                          {formatCurrency(technician.hourlyRate)}/hr
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" className="flex-1">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Book Now
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Chat
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Call
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        {/* Empty State */}
+        {!loading && filteredTechnicians.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <Search className="h-12 w-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No technicians found</h3>
+            <p className="text-gray-500 mb-4">
+              Try adjusting your search criteria or filters to find more results.
+            </p>
+            <Button onClick={clearFilters}>Clear Filters</Button>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
