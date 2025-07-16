@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { X, Filter, Star, DollarSign, Clock, MapPin, Settings } from "lucide-react"
+import { X, Filter, Star, DollarSign, Clock, MapPin, Settings, SlidersHorizontal } from "lucide-react"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { PriceFilter } from "./filters/PriceFilter"
 import { RatingFilter } from "./filters/RatingFilter"
@@ -58,6 +58,14 @@ export function FilterTabs() {
         value: `${searchFilters.selectedServices.length} selected`
       })
     }
+
+    if (searchFilters.maxDistance) {
+      active.push({
+        key: 'maxDistance',
+        label: 'Distance',
+        value: `${searchFilters.maxDistance} km`
+      })
+    }
     
     return active
   }
@@ -78,128 +86,209 @@ export function FilterTabs() {
       case 'selectedServices':
         setSearchFilters({ selectedServices: [] })
         break
+      case 'maxDistance':
+        setSearchFilters({ maxDistance: '' })
+        break
     }
   }
 
   const hasActiveFilters = activeFilters.length > 0
 
+  // Quick filter options for the horizontal pills
+  const getQuickFilterText = (filterType: 'price' | 'rating' | 'availability') => {
+    switch (filterType) {
+      case 'price':
+        return searchFilters.priceRange 
+          ? `${'$'.repeat(parseInt(searchFilters.priceRange))} and below`
+          : 'Price'
+      case 'rating':
+        return searchFilters.minRating 
+          ? `${searchFilters.minRating}+ stars`
+          : 'Rating'
+      case 'availability':
+        return searchFilters.availableNow 
+          ? 'Open now'
+          : 'Open now'
+    }
+  }
+
+  const handleQuickFilterToggle = (filterType: 'price' | 'rating' | 'availability') => {
+    switch (filterType) {
+      case 'price':
+        if (searchFilters.priceRange) {
+          setSearchFilters({ priceRange: '' })
+        } else {
+          setSearchFilters({ priceRange: '2' }) // Default to moderate
+        }
+        break
+      case 'rating':
+        if (searchFilters.minRating) {
+          setSearchFilters({ minRating: undefined })
+        } else {
+          setSearchFilters({ minRating: 4.0 }) // Default to 4+ stars
+        }
+        break
+      case 'availability':
+        setSearchFilters({ availableNow: !searchFilters.availableNow })
+        break
+    }
+  }
+
   return (
-    <Card className="border-gray-200">
-      <CardContent className="p-4">
-        {/* Filter Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-900">Filters</h3>
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="text-xs">
-                {activeFilters.length}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                Clear all
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-600 hover:text-gray-700"
-            >
-              {isExpanded ? 'Hide' : 'Show'} filters
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-4">
+      {/* Airbnb-style horizontal filter pills */}
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Essential filters as pills */}
+        <Button
+          variant={searchFilters.priceRange ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleQuickFilterToggle('price')}
+          className={`h-12 px-6 rounded-full border-2 transition-all ${
+            searchFilters.priceRange 
+              ? 'bg-gray-900 border-gray-900 text-white hover:bg-gray-800' 
+              : 'border-gray-300 hover:border-gray-900 bg-white text-gray-700'
+          }`}
+        >
+          <DollarSign className="w-4 h-4 mr-2" />
+          {getQuickFilterText('price')}
+        </Button>
 
-        {/* Active Filters Display */}
+        <Button
+          variant={searchFilters.minRating ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleQuickFilterToggle('rating')}
+          className={`h-12 px-6 rounded-full border-2 transition-all ${
+            searchFilters.minRating 
+              ? 'bg-gray-900 border-gray-900 text-white hover:bg-gray-800' 
+              : 'border-gray-300 hover:border-gray-900 bg-white text-gray-700'
+          }`}
+        >
+          <Star className="w-4 h-4 mr-2" />
+          {getQuickFilterText('rating')}
+        </Button>
+
+        <Button
+          variant={searchFilters.availableNow ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleQuickFilterToggle('availability')}
+          className={`h-12 px-6 rounded-full border-2 transition-all ${
+            searchFilters.availableNow 
+              ? 'bg-gray-900 border-gray-900 text-white hover:bg-gray-800' 
+              : 'border-gray-300 hover:border-gray-900 bg-white text-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4 mr-2" />
+          {getQuickFilterText('availability')}
+        </Button>
+
+        {/* More filters button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`h-12 px-6 rounded-full border-2 transition-all border-gray-300 hover:border-gray-900 bg-white text-gray-700 ${
+            isExpanded ? 'border-gray-900' : ''
+          }`}
+        >
+          <SlidersHorizontal className="w-4 h-4 mr-2" />
+          Filters
+          {hasActiveFilters && (
+            <Badge variant="secondary" className="ml-2 bg-red-100 text-red-700 text-xs">
+              {activeFilters.length}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Clear all filters */}
         {hasActiveFilters && (
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2">
-              {activeFilters.map((filter) => (
-                <Badge
-                  key={filter.key}
-                  variant="secondary"
-                  className="flex items-center space-x-1 pr-1 pl-3 py-1"
-                >
-                  <span className="text-xs">
-                    <span className="font-medium">{filter.label}:</span> {filter.value}
-                  </span>
-                  <button
-                    onClick={() => removeFilter(filter.key)}
-                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                    aria-label={`Remove ${filter.label} filter`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-12 px-4 text-gray-600 hover:text-red-600 underline"
+          >
+            Clear all
+          </Button>
         )}
+      </div>
 
-        {/* Filter Options */}
-        {isExpanded && (
-          <div className="space-y-4">
-            <Separator />
-            
-            {/* Filter Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Active Filters Tags */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap gap-2">
+          {activeFilters.map((filter) => (
+            <Badge
+              key={filter.key}
+              variant="secondary"
+              className="flex items-center space-x-1 pr-1 pl-3 py-1 bg-gray-100 text-gray-700 border border-gray-200"
+            >
+              <span className="text-xs">
+                <span className="font-medium">{filter.label}:</span> {filter.value}
+              </span>
+              <button
+                onClick={() => removeFilter(filter.key)}
+                className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                aria-label={`Remove ${filter.label} filter`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Expanded Filters Panel */}
+      {isExpanded && (
+        <Card className="border-gray-200">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Price Filter */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-1">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
                   <DollarSign className="w-4 h-4 text-gray-500" />
-                  <label className="text-sm font-medium text-gray-700">Price Level</label>
+                  <label className="text-sm font-medium text-gray-900">Price Level</label>
                 </div>
                 <PriceFilter />
               </div>
 
               {/* Rating Filter */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-1">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
                   <Star className="w-4 h-4 text-gray-500" />
-                  <label className="text-sm font-medium text-gray-700">Rating</label>
+                  <label className="text-sm font-medium text-gray-900">Rating</label>
                 </div>
                 <RatingFilter />
               </div>
 
               {/* Availability Filter */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-1">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
                   <Clock className="w-4 h-4 text-gray-500" />
-                  <label className="text-sm font-medium text-gray-700">Availability</label>
+                  <label className="text-sm font-medium text-gray-900">Availability</label>
                 </div>
                 <AvailabilityFilter />
               </div>
 
               {/* Service Filter */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-1">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
                   <Settings className="w-4 h-4 text-gray-500" />
-                  <label className="text-sm font-medium text-gray-700">Services</label>
+                  <label className="text-sm font-medium text-gray-900">Services</label>
                 </div>
                 <ServiceFilter />
               </div>
 
               {/* Location Filter */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-1">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
                   <MapPin className="w-4 h-4 text-gray-500" />
-                  <label className="text-sm font-medium text-gray-700">Distance</label>
+                  <label className="text-sm font-medium text-gray-900">Distance</label>
                 </div>
                 <LocationFilter />
               </div>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
