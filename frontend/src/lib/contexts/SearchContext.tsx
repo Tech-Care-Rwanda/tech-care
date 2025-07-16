@@ -8,6 +8,9 @@ export interface SearchFilters {
   urgency: string
   details: string
   priceRange?: string
+  minRating?: number
+  maxDistance?: string
+  selectedServices?: string[]
   sameDay: boolean
   remoteSupport: boolean
   computer: boolean
@@ -34,6 +37,7 @@ interface SearchContextType {
   setSearchResults: (results: TechnicianResult[]) => void
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
+  applyFilters: <T extends { rating: number; priceLevel: number; isOpen: boolean; services: string[] }>(items: T[]) => T[]
 }
 
 const defaultFilters: SearchFilters = {
@@ -42,6 +46,9 @@ const defaultFilters: SearchFilters = {
   urgency: '',
   details: '',
   priceRange: '',
+  minRating: undefined,
+  maxDistance: '',
+  selectedServices: [],
   sameDay: false,
   remoteSupport: false,
   computer: false,
@@ -69,6 +76,45 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setSearchResults([])
   }, [])
 
+  const applyFilters = useCallback(<T extends { rating: number; priceLevel: number; isOpen: boolean; services: string[] }>(items: T[]): T[] => {
+    return items.filter(item => {
+      // Price Level Filter
+      if (searchFilters.priceRange) {
+        const maxPriceLevel = parseInt(searchFilters.priceRange)
+        if (item.priceLevel > maxPriceLevel) {
+          return false
+        }
+      }
+
+      // Rating Filter
+      if (searchFilters.minRating) {
+        if (item.rating < searchFilters.minRating) {
+          return false
+        }
+      }
+
+      // Availability Filter
+      if (searchFilters.availableNow && !item.isOpen) {
+        return false
+      }
+
+      // Service Filter
+      if (searchFilters.selectedServices && searchFilters.selectedServices.length > 0) {
+        const hasMatchingService = searchFilters.selectedServices.some(selectedService => 
+          item.services.some(service => 
+            service.toLowerCase().includes(selectedService.toLowerCase()) ||
+            selectedService.toLowerCase().includes(service.toLowerCase())
+          )
+        )
+        if (!hasMatchingService) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [searchFilters])
+
   return (
     <SearchContext.Provider value={{
       searchFilters,
@@ -77,7 +123,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       searchResults,
       setSearchResults,
       isLoading,
-      setIsLoading
+      setIsLoading,
+      applyFilters
     }}>
       {children}
     </SearchContext.Provider>
@@ -114,6 +161,12 @@ export function URLParamsToFilters(searchParams: URLSearchParams): Partial<Searc
       const filterKey = key as keyof SearchFilters
       if (typeof defaultFilters[filterKey] === 'boolean') {
         (filters as Record<string, unknown>)[filterKey] = value === 'true'
+      } else if (filterKey === 'selectedServices') {
+        // Handle array fields
+        (filters as Record<string, unknown>)[filterKey] = value ? value.split(',') : []
+      } else if (filterKey === 'minRating') {
+        // Handle number fields
+        (filters as Record<string, unknown>)[filterKey] = value ? parseFloat(value) : undefined
       } else {
         (filters as Record<string, unknown>)[filterKey] = value
       }
