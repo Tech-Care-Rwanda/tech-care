@@ -29,6 +29,7 @@ enum TechnicianApprovalStatus {
 
 // Enum for booking status
 enum BookingStatus {
+  CART
   PENDING
   CONFIRMED
   IN_PROGRESS
@@ -133,6 +134,7 @@ model Booking {
   // Relations
   customer Users @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
   technician Users? @relation("TechnicianBookings", fields: [technicianId], references: [id], onDelete: SetNull)
+  bookingServices BookingService[]
 
   @@map("bookings")
 }
@@ -153,4 +155,40 @@ model TechnicianAvailability {
 
   @@unique([technicianId, dayOfWeek])
   @@map("technician_availability")
+}
+
+// Service model
+model Service {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  category    ServiceCategory
+  price       Decimal  @db.Decimal(10,2)
+  duration    Int      // Duration in minutes
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  bookingServices BookingService[]
+
+  @@map("services")
+}
+
+// BookingService junction table
+model BookingService {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int
+  serviceId   Int
+  quantity    Int      @default(1)
+  price       Decimal  @db.Decimal(10,2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, serviceId])
+  @@map("booking_services")
 }
