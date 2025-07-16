@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Upload, X, Eye, EyeOff, Loader2, Users, Wrench } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { getPostSignupRedirect } from '@/lib/utils/authUtils'
 
 type UserType = 'customer' | 'technician'
 
@@ -140,7 +141,9 @@ export default function SignupPage() {
       })
 
       if (result.success) {
-        router.push('/dashboard')
+        // Redirect to customer dashboard after successful registration
+        const redirectPath = getPostSignupRedirect('CUSTOMER')
+        router.push(redirectPath)
       } else {
         setError(result.error || 'Registration failed. Please try again.')
       }
@@ -168,7 +171,9 @@ export default function SignupPage() {
       })
 
       if (result.success) {
-        router.push('/dashboard')
+        // Redirect to pending approval page since technicians need admin approval
+        const redirectPath = getPostSignupRedirect('TECHNICIAN')
+        router.push(redirectPath)
       } else {
         setError(result.error || 'Registration failed. Please try again.')
       }

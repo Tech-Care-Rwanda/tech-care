@@ -1,16 +1,20 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { UserRole } from '@/lib/utils'
-import { authService, User as BackendUser, CustomerSignupData, TechnicianSignupData } from '@/lib/services/authService'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { UserRole } from '@/lib/utils';
+import { apiService } from '@/lib/services/api';
+import {
+  User as BackendUser,
+  SignUpRequest as CustomerSignupData,
+  TechnicianSignUpRequest as TechnicianSignupData,
+  apiRoleToUserRole,
+} from '@/types/api';
 
 // Re-export backend User type with some frontend-specific extensions
 export interface User extends BackendUser {
   // Frontend-specific fields for compatibility
   name?: string
   avatar?: string
-  status?: 'active' | 'inactive' | 'pending'
-  lastLogin?: string
   // Customer specific
   totalBookings?: number
   completedServices?: number
@@ -24,10 +28,34 @@ export interface User extends BackendUser {
   isAvailable?: boolean
 }
 
+// Helper function to transform backend user to frontend user
+function transformBackendUser(backendUser: BackendUser): User {
+  return {
+    ...backendUser,
+    name: backendUser.fullName,
+    avatar: backendUser.profileImage,
+    // Add role-specific defaults
+    ...(backendUser.role === 'CUSTOMER' && {
+      totalBookings: 0,
+      completedServices: 0,
+      savedTechnicians: 0,
+      totalSpent: 0
+    }),
+    ...(backendUser.role === 'TECHNICIAN' && {
+      rating: 0,
+      totalJobs: 0,
+      monthlyEarnings: 0,
+      specialties: [],
+      isAvailable: true
+    })
+  };
+}
+
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  isHydrated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   customerRegister: (userData: CustomerSignupData) => Promise<{ success: boolean; error?: string }>
   technicianRegister: (userData: TechnicianSignupData) => Promise<{ success: boolean; error?: string }>
@@ -41,186 +69,114 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   // Load and validate user from localStorage on mount
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedUser = authService.getStoredUser()
-        const storedToken = authService.getStoredToken()
+        // Only access localStorage on client side
+        if (typeof window !== 'undefined') {
+          const storedUser = apiService.getCurrentUser();
+          const isAuthenticated = apiService.isAuthenticated();
 
-        if (storedUser && storedToken) {
-          // Verify with backend
-          const response = await authService.getCurrentUser()
-
-          if (response.success && response.data) {
-            // Transform backend user to frontend user format
-            const transformedUser: User = {
-              ...response.data,
-              id: response.data.id.toString(),
-              name: response.data.fullName,
-              phone: response.data.phoneNumber,
-              status: response.data.isActive ? 'active' : 'inactive',
-              lastLogin: new Date().toISOString(),
-              // Add role-specific defaults
-              ...(response.data.role === 'CUSTOMER' && {
-                totalBookings: 0,
-                completedServices: 0,
-                savedTechnicians: 0,
-                totalSpent: 0
-              }),
-              ...(response.data.role === 'TECHNICIAN' && {
-                rating: response.data.technicianDetails?.rate || 0,
-                totalJobs: 0,
-                monthlyEarnings: 0,
-                specialties: response.data.technicianDetails?.specialization ? [response.data.technicianDetails.specialization] : [],
-                isAvailable: response.data.technicianDetails?.isAvailable || false
-              })
-            }
-
-            setUser(transformedUser)
+          if (storedUser && isAuthenticated) {
+            // Transform and set the stored user
+            setUser(transformBackendUser(storedUser));
           } else {
-            // Invalid/expired token, clear storage
-            await authService.logout()
+            // Clear any invalid storage
+            apiService.clearAuthData();
           }
         }
       } catch (error) {
-        console.error('Error initializing auth:', error)
-        await authService.logout()
+        console.error('Error initializing auth:', error);
+        if (typeof window !== 'undefined') {
+          apiService.clearAuthData();
+        }
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
+        setIsHydrated(true);
       }
-    }
+    };
 
-    initializeAuth()
-  }, [])
+    initializeAuth();
+  }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
 
     try {
-      const response = await authService.login({ email, password })
+      const response = await apiService.auth.login({ email, password })
 
       if (response.success && response.data) {
+        // Store auth data first
+        apiService.setAuthData(response.data.user, response.data.token);
+
         // Transform backend user to frontend user format
-        const transformedUser: User = {
-          ...response.data.user,
-          id: response.data.user.id.toString(),
-          name: response.data.user.fullName,
-          phone: response.data.user.phoneNumber,
-          status: response.data.user.isActive ? 'active' : 'inactive',
-          lastLogin: new Date().toISOString(),
-          // Add role-specific defaults
-          ...(response.data.user.role === 'CUSTOMER' && {
-            totalBookings: 0,
-            completedServices: 0,
-            savedTechnicians: 0,
-            totalSpent: 0
-          }),
-          ...(response.data.user.role === 'TECHNICIAN' && {
-            rating: response.data.user.technicianDetails?.rate || 0,
-            totalJobs: 0,
-            monthlyEarnings: 0,
-            specialties: response.data.user.technicianDetails?.specialization ? [response.data.user.technicianDetails.specialization] : [],
-            isAvailable: response.data.user.technicianDetails?.isAvailable || false
-          })
-        }
-
-        setUser(transformedUser)
-        return { success: true }
-      }
-
-      return {
-        success: false,
-        error: response.error || 'Login failed. Please try again.'
+        const transformedUser = transformBackendUser(response.data.user);
+        setUser(transformedUser);
+        return { success: true };
+      } else {
+        return { success: false, error: response.message || 'Login failed' };
       }
     } catch (error) {
-      console.error('Login error:', error)
-      return { success: false, error: 'Login failed. Please try again.' }
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      return { success: false, error: errorMessage };
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const customerRegister = async (userData: CustomerSignupData): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
 
     try {
-      const response = await authService.customerSignup(userData)
+      const response = await apiService.auth.registerCustomer(userData)
 
       if (response.success && response.data) {
-        // Transform and set user after successful registration
-        const transformedUser: User = {
-          ...response.data.user,
-          id: response.data.user.id.toString(),
-          name: response.data.user.fullName,
-          phone: response.data.user.phoneNumber,
-          status: response.data.user.isActive ? 'active' : 'inactive',
-          lastLogin: new Date().toISOString(),
-          totalBookings: 0,
-          completedServices: 0,
-          savedTechnicians: 0,
-          totalSpent: 0
-        }
+        const { user, token } = response.data;
+        // Store auth data first
+        apiService.setAuthData(user, token);
 
-        setUser(transformedUser)
-        return { success: true }
-      }
-
-      return {
-        success: false,
-        error: response.error || 'Registration failed. Please try again.'
+        // Transform and set user
+        const transformedUser = transformBackendUser(user);
+        setUser(transformedUser);
+        return { success: true };
+      } else {
+        return { success: false, error: response.message || 'Registration failed' };
       }
     } catch (error) {
-      console.error('Customer registration error:', error)
-      return { success: false, error: 'Registration failed. Please try again.' }
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      return { success: false, error: errorMessage };
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const technicianRegister = async (userData: TechnicianSignupData): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
 
     try {
-      const response = await authService.technicianSignup(userData)
+      const response = await apiService.auth.registerTechnician(userData)
 
-      if (response.success && response.data) {
-        // Transform and set user after successful registration
-        const transformedUser: User = {
-          ...response.data.user,
-          id: response.data.user.id.toString(),
-          name: response.data.user.fullName,
-          phone: response.data.user.phoneNumber,
-          status: response.data.user.isActive ? 'active' : 'inactive',
-          lastLogin: new Date().toISOString(),
-          rating: response.data.user.technicianDetails?.rate || 0,
-          totalJobs: 0,
-          monthlyEarnings: 0,
-          specialties: response.data.user.technicianDetails?.specialization ? [response.data.user.technicianDetails.specialization] : [],
-          isAvailable: response.data.user.technicianDetails?.isAvailable || false
-        }
-
-        setUser(transformedUser)
-        return { success: true }
-      }
-
-      return {
-        success: false,
-        error: response.error || 'Registration failed. Please try again.'
+      if (response.success) {
+        // Technician registration requires admin approval, so no login
+        return { success: true };
+      } else {
+        return { success: false, error: response.message || 'Registration failed' };
       }
     } catch (error) {
-      console.error('Technician registration error:', error)
-      return { success: false, error: 'Registration failed. Please try again.' }
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      return { success: false, error: errorMessage };
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const logout = async (): Promise<void> => {
     setIsLoading(true)
     try {
-      await authService.logout()
+      await apiService.auth.logout()
       setUser(null)
     } catch (error) {
       console.error('Logout error:', error)
@@ -231,60 +187,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateUser = (userData: Partial<User>) => {
-    if (!user) return
-
-    const updatedUser = { ...user, ...userData }
-    setUser(updatedUser)
-    // Update localStorage with new user data
-    localStorage.setItem('techcare-user', JSON.stringify(updatedUser))
+  const updateUser = (userData: Partial<User>): void => {
+    if (user) {
+      setUser({ ...user, ...userData })
+    }
   }
 
   const refreshUser = async (): Promise<void> => {
-    if (!authService.isAuthenticated()) return
+    if (!apiService.isAuthenticated()) return
 
     try {
-      const response = await authService.getCurrentUser()
+      const response = await apiService.customer.getProfile()
 
       if (response.success && response.data) {
-        const transformedUser: User = {
-          ...response.data,
-          id: response.data.id.toString(),
-          name: response.data.fullName,
-          phone: response.data.phoneNumber,
-          status: response.data.isActive ? 'active' : 'inactive',
-          lastLogin: new Date().toISOString(),
-          // Add role-specific defaults
-          ...(response.data.role === 'CUSTOMER' && {
-            totalBookings: 0,
-            completedServices: 0,
-            savedTechnicians: 0,
-            totalSpent: 0
-          }),
-          ...(response.data.role === 'TECHNICIAN' && {
-            rating: response.data.technicianDetails?.rate || 0,
-            totalJobs: 0,
-            monthlyEarnings: 0,
-            specialties: response.data.technicianDetails?.specialization ? [response.data.technicianDetails.specialization] : [],
-            isAvailable: response.data.technicianDetails?.isAvailable || false
-          })
-        }
-
-        setUser(transformedUser)
-      } else {
-        // Invalid session, logout
-        await logout()
+        const transformedUser = transformBackendUser(response.data);
+        setUser(transformedUser);
       }
     } catch (error) {
       console.error('Error refreshing user:', error)
+      // If refresh fails, user might be logged out
       await logout()
     }
   }
 
+  const checkUserSession = () => {
+    const currentUser = apiService.getCurrentUser()
+    const isAuth = apiService.isAuthenticated()
+
+    if (!currentUser || !isAuth) {
+      setUser(null)
+      return false
+    }
+
+    return true
+  }
+
+  const getUserRole = (): UserRole => {
+    if (!user) return null
+
+    // Convert API role to user role using the imported function
+    return apiRoleToUserRole(user.role);
+  }
+
+  const isAuthenticated = isHydrated && !!user && (typeof window !== 'undefined' ? apiService.isAuthenticated() : false)
+
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isLoading,
+    isHydrated,
     login,
     customerRegister,
     technicianRegister,
@@ -311,7 +262,7 @@ export function useAuth() {
 // Helper hook for getting current user role safely
 export function useUserRole(): UserRole {
   const { user } = useAuth()
-  return user?.role || null
+  return user?.role ? apiRoleToUserRole(user.role) : null
 }
 
 // Helper hook for checking specific permissions
@@ -319,9 +270,9 @@ export function usePermissions() {
   const { user } = useAuth()
 
   return {
-    canCreateBookings: user?.role === 'customer',
-    canManageJobs: user?.role === 'technician',
-    canAccessAdmin: user?.role === 'admin',
+    canCreateBookings: user?.role === 'CUSTOMER',
+    canManageJobs: user?.role === 'TECHNICIAN',
+    canAccessAdmin: user?.role === 'ADMIN',
     canEditProfile: !!user,
     canViewDashboard: !!user
   }

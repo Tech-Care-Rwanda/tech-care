@@ -24,9 +24,10 @@ import type {
   PaginatedResponse,
   FileUploadResponse,
 } from '@/types/api';
+import { API_ENDPOINTS } from '@/lib/config/api';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tech-care-zem5.onrender.com';
 const API_TIMEOUT = 30000; // 30 seconds
 
 export class ApiError extends Error {
@@ -60,7 +61,7 @@ class ApiClient {
    */
   private getAuthHeader(): Record<string, string> {
     if (typeof window === 'undefined') return {};
-    
+
     const token = localStorage.getItem('techcare-token');
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
@@ -70,7 +71,7 @@ class ApiClient {
    */
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType?.includes('application/json')) {
       throw new ApiError(
         'Invalid response format',
@@ -101,7 +102,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -119,7 +120,7 @@ class ApiClient {
       if (error instanceof ApiError) {
         throw error;
       }
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.name === 'TimeoutError') {
           throw new ApiError('Request timeout', 408, 'TIMEOUT');
@@ -131,7 +132,7 @@ class ApiClient {
           { originalError: error.message }
         );
       }
-      
+
       throw new ApiError('Unknown error occurred', 0, 'UNKNOWN_ERROR');
     }
   }
@@ -141,7 +142,7 @@ class ApiClient {
    */
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
     const url = new URL(`${this.baseURL}${endpoint}`);
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
@@ -201,10 +202,10 @@ class ApiClient {
     onProgress?: (progress: number) => void
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      
+
       // Handle progress
       if (onProgress) {
         xhr.upload.addEventListener('progress', (event) => {
@@ -225,7 +226,7 @@ class ApiClient {
               'content-type': xhr.getResponseHeader('content-type') || 'application/json',
             }),
           });
-          
+
           const result = await this.handleResponse<T>(response);
           resolve(result);
         } catch (error) {
@@ -245,7 +246,7 @@ class ApiClient {
       // Configure request
       xhr.timeout = API_TIMEOUT;
       xhr.open('POST', url);
-      
+
       // Add auth header
       const authHeader = this.getAuthHeader();
       if (authHeader.Authorization) {
@@ -262,14 +263,14 @@ class ApiClient {
  * Authentication Service
  */
 export class AuthService {
-  constructor(private api: ApiClient) {}
+  constructor(private api: ApiClient) { }
 
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    return this.api.post<LoginResponse>('/auth/login', credentials);
+    return this.api.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, credentials);
   }
 
   async registerCustomer(userData: SignUpRequest): Promise<ApiResponse<SignUpResponse>> {
-    return this.api.post<SignUpResponse>('/auth/customer/signup', userData);
+    return this.api.post<SignUpResponse>(API_ENDPOINTS.AUTH.CUSTOMER_SIGNUP, userData);
   }
 
   async registerTechnician(
@@ -277,7 +278,7 @@ export class AuthService {
     onProgress?: (progress: number) => void
   ): Promise<ApiResponse<SignUpResponse>> {
     const formData = new FormData();
-    
+
     // Add text fields
     Object.entries(userData).forEach(([key, value]) => {
       if (value !== undefined && !(value instanceof File)) {
@@ -297,7 +298,7 @@ export class AuthService {
       formData.append('certificateDocument', userData.certificateDocument);
     }
 
-    return this.api.upload<SignUpResponse>('/auth/technician/signup', formData, onProgress);
+    return this.api.upload<SignUpResponse>(API_ENDPOINTS.AUTH.TECHNICIAN_SIGNUP, formData, onProgress);
   }
 
   async logout(): Promise<void> {
@@ -309,11 +310,11 @@ export class AuthService {
   }
 
   async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<void>> {
-    return this.api.post<void>('/auth/forgot-password', data);
+    return this.api.post<void>(API_ENDPOINTS.CUSTOMER.FORGOT_PASSWORD, data);
   }
 
   async resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<void>> {
-    return this.api.post<void>('/auth/reset-password', data);
+    return this.api.post<void>(API_ENDPOINTS.CUSTOMER.RESET_PASSWORD, data);
   }
 }
 
@@ -321,14 +322,14 @@ export class AuthService {
  * Customer Service
  */
 export class CustomerService {
-  constructor(private api: ApiClient) {}
+  constructor(private api: ApiClient) { }
 
   async getProfile(): Promise<ApiResponse<Customer>> {
-    return this.api.get<Customer>('/customer/profile');
+    return this.api.get<Customer>(API_ENDPOINTS.CUSTOMER.PROFILE);
   }
 
   async checkAuth(): Promise<ApiResponse<{ isAuthenticated: boolean }>> {
-    return this.api.get<{ isAuthenticated: boolean }>('/customer/check-auth');
+    return this.api.get<{ isAuthenticated: boolean }>(API_ENDPOINTS.CUSTOMER.CHECK_AUTH);
   }
 
   async updateProfile(data: ProfileUpdateRequest): Promise<ApiResponse<Customer>> {
@@ -343,18 +344,18 @@ export class CustomerService {
           }
         }
       });
-      return this.api.upload<Customer>('/customer/profile', formData);
+      return this.api.upload<Customer>(API_ENDPOINTS.CUSTOMER.PROFILE, formData);
     }
-    
-    return this.api.put<Customer>('/customer/profile', data);
+
+    return this.api.put<Customer>(API_ENDPOINTS.CUSTOMER.PROFILE, data);
   }
 
   async changePassword(data: PasswordChangeRequest): Promise<ApiResponse<void>> {
-    return this.api.post<void>('/customer/change-password', data);
+    return this.api.post<void>(API_ENDPOINTS.CUSTOMER.CHANGE_PASSWORD, data);
   }
 
   async logout(): Promise<ApiResponse<void>> {
-    return this.api.get<void>('/customer/logout');
+    return this.api.get<void>(API_ENDPOINTS.CUSTOMER.LOGOUT);
   }
 }
 
@@ -362,38 +363,38 @@ export class CustomerService {
  * Admin Service
  */
 export class AdminService {
-  constructor(private api: ApiClient) {}
+  constructor(private api: ApiClient) { }
 
   async getProfile(): Promise<ApiResponse<Admin>> {
-    return this.api.get<Admin>('/admin/profile');
+    return this.api.get<Admin>(API_ENDPOINTS.ADMIN.PROFILE);
   }
 
   async checkAuth(): Promise<ApiResponse<{ isAuthenticated: boolean }>> {
-    return this.api.get<{ isAuthenticated: boolean }>('/admin/check-isAuth');
+    return this.api.get<{ isAuthenticated: boolean }>(API_ENDPOINTS.ADMIN.CHECK_AUTH);
   }
 
   async getTechnicians(params?: AdminGetTechniciansParams): Promise<ApiResponse<PaginatedResponse<Technician>>> {
-    return this.api.get<PaginatedResponse<Technician>>('/admin/get-technicians', params);
+    return this.api.get<PaginatedResponse<Technician>>(API_ENDPOINTS.ADMIN.GET_TECHNICIANS, params);
   }
 
   async getTechnicianDetails(technicianId: string): Promise<ApiResponse<Technician>> {
-    return this.api.get<Technician>(`/admin/technicians/${technicianId}`);
+    return this.api.get<Technician>(API_ENDPOINTS.ADMIN.GET_TECHNICIAN_DETAILS(technicianId));
   }
 
   async approveTechnician(technicianId: string): Promise<ApiResponse<void>> {
-    return this.api.put<void>(`/admin/technicians/${technicianId}/approve`);
+    return this.api.put<void>(API_ENDPOINTS.ADMIN.APPROVE_TECHNICIAN(technicianId));
   }
 
   async rejectTechnician(technicianId: string, reason?: string): Promise<ApiResponse<void>> {
-    return this.api.put<void>(`/admin/technicians/${technicianId}/reject`, { rejectionReason: reason });
+    return this.api.put<void>(API_ENDPOINTS.ADMIN.REJECT_TECHNICIAN(technicianId), { rejectionReason: reason });
   }
 
   async promoteCustomerToAdmin(customerId: string): Promise<ApiResponse<void>> {
-    return this.api.put<void>(`/admin/customer-to-admin/${customerId}`);
+    return this.api.put<void>(API_ENDPOINTS.ADMIN.PROMOTE_TO_ADMIN(customerId));
   }
 
   async logout(): Promise<ApiResponse<void>> {
-    return this.api.get<void>('/admin/logout');
+    return this.api.get<void>(API_ENDPOINTS.ADMIN.LOGOUT);
   }
 }
 
@@ -402,18 +403,18 @@ export class AdminService {
  * Handles public technician-related operations
  */
 export class TechnicianService {
-  constructor(private api: ApiClient) {}
+  constructor(private api: ApiClient) { }
 
   async getTechnician(technicianId: string): Promise<ApiResponse<Technician>> {
-    return this.api.get<Technician>(`/api/v1/technicians/${technicianId}`);
+    return this.api.get<Technician>(API_ENDPOINTS.TECHNICIAN.GET_BY_ID(technicianId));
   }
 
   async getAvailableTechnicians(): Promise<ApiResponse<Technician[]>> {
-    return this.api.get<Technician[]>('/api/v1/technicians');
+    return this.api.get<Technician[]>(API_ENDPOINTS.TECHNICIAN.GET_ALL);
   }
 
   async getTechnicianSchedule(technicianId: string): Promise<ApiResponse<any>> {
-    return this.api.get<any>(`/api/v1/technicians/${technicianId}/schedule`);
+    return this.api.get<any>(`${API_ENDPOINTS.TECHNICIAN.GET_BY_ID(technicianId)}/schedule`);
   }
 }
 
@@ -422,7 +423,7 @@ export class TechnicianService {
  */
 class TechCareApiService {
   private apiClient: ApiClient;
-  
+
   public auth: AuthService;
   public customer: CustomerService;
   public admin: AdminService;
@@ -430,7 +431,7 @@ class TechCareApiService {
 
   constructor() {
     this.apiClient = new ApiClient();
-    
+
     this.auth = new AuthService(this.apiClient);
     this.customer = new CustomerService(this.apiClient);
     this.admin = new AdminService(this.apiClient);
@@ -450,7 +451,7 @@ class TechCareApiService {
    */
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') return null;
-    
+
     try {
       const userData = localStorage.getItem('techcare-user');
       return userData ? JSON.parse(userData) : null;
@@ -464,7 +465,7 @@ class TechCareApiService {
    */
   setAuthData(user: User, token: string): void {
     if (typeof window === 'undefined') return;
-    
+
     localStorage.setItem('techcare-user', JSON.stringify(user));
     localStorage.setItem('techcare-token', token);
   }
@@ -474,7 +475,7 @@ class TechCareApiService {
    */
   clearAuthData(): void {
     if (typeof window === 'undefined') return;
-    
+
     localStorage.removeItem('techcare-user');
     localStorage.removeItem('techcare-token');
   }

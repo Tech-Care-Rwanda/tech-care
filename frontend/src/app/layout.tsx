@@ -24,6 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning={true} // Prevents hydration warnings from browser extensions like Grammarly
       >
         <AuthProvider>
           <SearchProvider>

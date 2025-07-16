@@ -69,9 +69,13 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
     } catch (error) {
       console.warn('Failed to save language preference:', error)
     }
-  }, [])
+  }, [setCurrentLang])
 
-  const navItems = effectiveUserType ? navigationItems[effectiveUserType] : navigationItems.guest
+  // Ensure effectiveUserType is a valid key of navigationItems, fallback to 'guest'
+  const navItems =
+    effectiveUserType && Object.prototype.hasOwnProperty.call(navigationItems, effectiveUserType)
+      ? navigationItems[effectiveUserType as keyof typeof navigationItems]
+      : navigationItems.guest
 
   // Handle escape key to close mobile menu
   React.useEffect(() => {

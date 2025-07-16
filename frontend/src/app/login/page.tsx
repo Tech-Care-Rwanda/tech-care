@@ -1,21 +1,33 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { getPostLoginRedirect } from '@/lib/utils/authUtils'
+import { NoSSR } from '@/components/ui/no-ssr'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, user, isAuthenticated, isHydrated } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [loginSuccess, setLoginSuccess] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   })
+
+  // Handle redirect after successful login (only after hydration completes)
+  useEffect(() => {
+    if (loginSuccess && isAuthenticated && user?.role && isHydrated && typeof window !== 'undefined') {
+      const redirectPath = getPostLoginRedirect(user.role)
+      console.log('Redirecting to:', redirectPath)
+      router.push(redirectPath)
+    }
+  }, [loginSuccess, isAuthenticated, user, router, isHydrated])
 
   const togglePassword = () => {
     setShowPassword(!showPassword)
@@ -31,15 +43,19 @@ export default function LoginPage() {
     }
 
     try {
+      console.log('Attempting login...')
       const result = await login(formData.email, formData.password)
+      console.log('Login result:', result)
 
       if (result.success) {
-        // Redirect to dashboard after successful login
-        router.push('/dashboard')
+        console.log('Login successful, will redirect based on user role...')
+        setLoginSuccess(true)
       } else {
+        console.log('Login failed:', result.error)
         setError(result.error || 'Login failed. Please try again.')
       }
     } catch (err) {
+      console.error('Login error:', err)
       setError('An unexpected error occurred. Please try again.')
     }
   }
