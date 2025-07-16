@@ -221,7 +221,7 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 "md:hidden",
                 variant === "transparent"
                   ? "text-white hover:bg-white/10 hover:text-white"
-                  : ""
+                  : "text-foreground hover:bg-accent hover:text-accent-foreground"
               )}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
