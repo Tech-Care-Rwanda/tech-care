@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense, useMemo } from "react"
 import Image from "next/image"
 import { Heart, Star, Search, MapPin, Clock, Phone, Globe, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useSearch } from "@/lib/contexts/SearchContext"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -12,21 +12,27 @@ import { URLParamsToFilters } from "@/lib/contexts/SearchContext"
 import { Header } from "@/components/layout/header"
 import { BaseMap } from "@/components/maps"
 import { useComputerShops } from "@/lib/hooks/useComputerShops"
+import { FilterTabs } from "@/components/search/FilterTabs"
 
 function SearchResultsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { searchFilters, setSearchFilters, isLoading: searchLoading, setIsLoading } = useSearch()
+  const { searchFilters, setSearchFilters, isLoading: searchLoading, setIsLoading, applyFilters } = useSearch()
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
   
   // Fetch real computer shops from Google Places
   // Use useMemo to stabilize the location object and prevent infinite re-renders
   const kigaliLocation = useMemo(() => ({ lat: -1.9441, lng: 30.0619 }), []);
   
-  const { shops, loading: shopsLoading, error } = useComputerShops({
+  const { shops: allShops, loading: shopsLoading, error } = useComputerShops({
     location: kigaliLocation, // Stable location object
     radius: 10000 // 10km radius
   })
+
+  // Apply filters to shops
+  const shops = useMemo(() => {
+    return applyFilters(allShops)
+  }, [allShops, applyFilters])
 
   // Load filters from URL on component mount
   useEffect(() => {
@@ -36,6 +42,27 @@ function SearchResultsContent() {
     }
     setIsLoading(false)
   }, [searchParams, setSearchFilters, setIsLoading])
+
+  // Update URL when filters change
+  useEffect(() => {
+    const newParams = new URLSearchParams()
+    
+    // Add all filter values to URL
+    Object.entries(searchFilters).forEach(([key, value]) => {
+      if (value !== '' && value !== false && value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            newParams.set(key, value.join(','))
+          }
+        } else {
+          newParams.set(key, String(value))
+        }
+      }
+    })
+    
+    const newUrl = `${window.location.pathname}?${newParams.toString()}`
+    window.history.replaceState({}, '', newUrl)
+  }, [searchFilters])
 
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
   const [mapCenter, setMapCenter] = useState({ lat: -1.9441, lng: 30.0619 })
@@ -121,6 +148,11 @@ function SearchResultsContent() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Filter Tabs */}
+        <div className="mb-6">
+          <FilterTabs />
+        </div>
+
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             {shops.length} computer shops in {searchFilters.location || 'Kigali'}
