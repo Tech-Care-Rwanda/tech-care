@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { getPostLoginRedirect } from '@/lib/utils/authUtils'
 import { NoSSR } from '@/components/ui/no-ssr'
+import { apiService } from '@/lib/services/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -50,6 +51,14 @@ export default function LoginPage() {
       if (result.success) {
         console.log('Login successful, will redirect based on user role...')
         setLoginSuccess(true)
+
+        // Get the user from localStorage since it's stored immediately
+        const storedUser = apiService.getCurrentUser()
+        if (storedUser && storedUser.role) {
+          const redirectPath = getPostLoginRedirect(storedUser.role)
+          console.log('Redirecting to:', redirectPath)
+          router.push(redirectPath)
+        }
       } else {
         console.log('Login failed:', result.error)
         setError(result.error || 'Login failed. Please try again.')
