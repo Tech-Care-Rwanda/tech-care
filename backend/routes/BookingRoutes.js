@@ -5,6 +5,7 @@ const {
     validateUpdateBooking,
     validateBookingStatus,
     validateAssignTechnician,
+    validateAddServiceToCart,
     handleValidationErrors
 } = require('../MiddleWare/ValidationMiddleware');
 const {
@@ -14,7 +15,11 @@ const {
     updateBooking,
     updateBookingStatus,
     assignTechnician,
-    deleteBooking
+    deleteBooking,
+    addServiceToCart,
+    getCart,
+    removeServiceFromCart,
+    confirmCart
 } = require('../Controllers/BookingController');
 
 const router = express.Router();
@@ -39,5 +44,18 @@ router.put('/:id/assign-technician', verifyAdmin, validateAssignTechnician, hand
 
 // Cancel/Delete booking
 router.delete('/:id', verifyToken, deleteBooking);
+
+// Cart endpoints
+// Add service to cart
+router.post('/cart/services', verifyCustomer, validateAddServiceToCart, handleValidationErrors, addServiceToCart);
+
+// Get current cart
+router.get('/cart', verifyCustomer, getCart);
+
+// Remove service from cart
+router.delete('/cart/services/:serviceId', verifyCustomer, removeServiceFromCart);
+
+// Confirm cart and create booking
+router.post('/cart/confirm', verifyCustomer, confirmCart);
 
 module.exports = router;
