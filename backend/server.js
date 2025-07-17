@@ -5,6 +5,7 @@ const { PrismaClient } = require('./generated/prisma');
 const AutheticationRoutes = require('./routes/AutheticationRoutes');
 const CustomerRoutes = require('./routes/CustomerRoutes')
 const AdminRoutes = require('./routes/AdminRoutes')
+const CategoryRoutes = require('./routes/Category/CategoryRoutes');
 const path = require('path');
 
 // Load environment variables
@@ -55,6 +56,7 @@ app.get('/', (req, res) => {
 app.use('/api/v1/auth', AutheticationRoutes);
 app.use('/api/v1/customer',  CustomerRoutes);
 app.use('/api/v1/admin', AdminRoutes);
+app.use('/api/v1/categories', CategoryRoutes);
 
 // Health check route
 app.get('/health', async (req, res) => {

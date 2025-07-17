@@ -21,7 +21,7 @@ enum UserRole {
   CUSTOMER
 }
 
-// Enum  for technician approval status
+// Enum for technician approval status
 enum TechnicianApprovalStatus {
   PENDING
   APPROVED
@@ -62,7 +62,7 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-// Supporting  Technician Details model
+// Supporting Technician Details model
 model TechnicianDetails {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
@@ -81,6 +81,44 @@ model TechnicianDetails {
   
   // Foreign key relationship
   user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Many-to-many relationship with services (technicians create services)
+  services Service[]
 
-  @@map("TechnicianDetails")
+  @@map("technician_details")
+}
+
+// Category model (managed by admin)
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // One-to-many relationship with services
+  services Service[]
+  
+  @@map("categories")
+}
+
+// Service model (created by technicians)
+model Service {
+  id            Int     @id @default(autoincrement())
+  serviceName   String
+  description   String
+  categoryId    Int
+  price         Decimal @default(0) @db.Decimal(10, 2) // Technician sets their own price
+  timeEstimate  Int
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Foreign key relationship with category
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  // Many-to-many relationship with technicians (who created/offer this service)
+  technicians TechnicianDetails[]
+  
+  @@map("services")
 }
