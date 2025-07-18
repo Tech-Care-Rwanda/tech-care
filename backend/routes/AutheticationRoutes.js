@@ -2,18 +2,14 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { TechnicianSignUp, CustomerOrAdminSignUp, Login } = require('../Controllers/AutheticationControllers');
-const { uploadTechnicianFiles } = require('../Configuration/fileMulterConfig');
-
+const { uploadMiddleware } = require('../Configuration/fileMulterConfig');
 
 // Customer or Admin Sign Up Route
 router.post('/customer/signup', CustomerOrAdminSignUp);
 
 // Debug route to test form data
 router.post('/debug-form', 
-    uploadTechnicianFiles.fields([
-        { name: 'profileImage', maxCount: 1 },
-        { name: 'certificateDocument', maxCount: 1 }
-    ]),
+    uploadMiddleware.technicianFiles, // FIXED: Use uploadMiddleware.technicianFiles
     (req, res) => {
         res.json({
             message: 'Debug successful',
@@ -34,10 +30,7 @@ router.post('/debug-form',
 router.post('/technician/signup', 
     // Handle file uploads with error handling
     (req, res, next) => {
-        const upload = uploadTechnicianFiles.fields([
-            { name: 'profileImage', maxCount: 1 },
-            { name: 'certificateDocument', maxCount: 1 }
-        ]);
+        const upload = uploadMiddleware.technicianFiles; // FIXED: Use uploadMiddleware.technicianFiles
 
         upload(req, res, function(err) {
             if (err instanceof multer.MulterError) {
@@ -66,7 +59,3 @@ router.post('/technician/signup',
 router.post('/login', Login);
 
 module.exports = router;
-
-
-
-

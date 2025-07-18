@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('./generated/prisma');
 const AutheticationRoutes = require('./routes/AutheticationRoutes');
 const CustomerRoutes = require('./routes/CustomerRoutes')
 const AdminRoutes = require('./routes/AdminRoutes')
+const CategoryRoutes = require('./routes/Category/CategoryRoutes');
+const ServicesRoutes = require('./routes/Services/ServicesRoutes');
 const BookingRoutes = require('./routes/BookingRoutes')
 const TechnicianRoutes = require('./routes/TechnicianRoutes')
 const path = require('path');
@@ -57,6 +59,8 @@ app.get('/', (req, res) => {
 app.use('/api/v1/auth', AutheticationRoutes);
 app.use('/api/v1/customer',  CustomerRoutes);
 app.use('/api/v1/admin', AdminRoutes);
+app.use('/api/v1/categories', CategoryRoutes);
+app.use('api/v1/services', ServicesRoutes);
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/technicians', TechnicianRoutes);
 
