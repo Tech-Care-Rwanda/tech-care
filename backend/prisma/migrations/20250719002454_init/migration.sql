@@ -1,9 +1,9 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'TECHNICIAN', 'CUSTOMER');
 
-  - You are about to drop the `TechnicianDetails` table. If the table is not empty, all the data it contains will be lost.
+-- CreateEnum
+CREATE TYPE "TechnicianApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
-*/
 -- CreateEnum
 CREATE TYPE "BookingStatus" AS ENUM ('CART', 'CONFIRMED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'EXPIRED');
 
@@ -16,11 +16,47 @@ CREATE TYPE "AvailabilityStatus" AS ENUM ('AVAILABLE', 'BOOKED', 'UNAVAILABLE');
 -- CreateEnum
 CREATE TYPE "TimeSlotType" AS ENUM ('MORNING', 'AFTERNOON', 'EVENING', 'LUNCH_BREAK');
 
--- DropForeignKey
-ALTER TABLE "TechnicianDetails" DROP CONSTRAINT "TechnicianDetails_userId_fkey";
+-- CreateTable
+CREATE TABLE "users" (
+    "id" SERIAL NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "phoneNumber" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" "UserRole" NOT NULL DEFAULT 'CUSTOMER',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- DropTable
-DROP TABLE "TechnicianDetails";
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "password_reset_tokens" (
+    "id" SERIAL NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "used" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "locations" (
+    "id" SERIAL NOT NULL,
+    "customerId" INTEGER NOT NULL,
+    "addressName" TEXT,
+    "description" TEXT NOT NULL,
+    "district" TEXT NOT NULL,
+    "province" TEXT NOT NULL,
+    "googleMapUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "locations_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "technician_details" (
@@ -57,8 +93,9 @@ CREATE TABLE "categories" (
 CREATE TABLE "time_slots" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "startTime" TEXT NOT NULL,
-    "endTime" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "startTime" TIME NOT NULL,
+    "endTime" TIME NOT NULL,
     "type" "TimeSlotType" NOT NULL DEFAULT 'MORNING',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "isBookable" BOOLEAN NOT NULL DEFAULT true,
@@ -76,8 +113,6 @@ CREATE TABLE "services" (
     "description" TEXT NOT NULL,
     "categoryId" INTEGER NOT NULL,
     "price" DECIMAL(10,2) NOT NULL DEFAULT 0,
-    "timeEstimate" INTEGER NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -104,7 +139,8 @@ CREATE TABLE "bookings" (
     "customerId" INTEGER NOT NULL,
     "technicianId" INTEGER NOT NULL,
     "serviceId" INTEGER NOT NULL,
-    "availabilityId" INTEGER,
+    "locationId" INTEGER,
+    "availabilityId" INTEGER NOT NULL,
     "scheduledDate" TIMESTAMP(3),
     "duration" INTEGER NOT NULL,
     "totalPrice" DECIMAL(10,2) NOT NULL,
@@ -121,25 +157,6 @@ CREATE TABLE "bookings" (
     "cancellationReason" TEXT,
 
     CONSTRAINT "bookings_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "payments" (
-    "id" SERIAL NOT NULL,
-    "bookingId" INTEGER NOT NULL,
-    "customerId" INTEGER NOT NULL,
-    "amount" DECIMAL(10,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'USD',
-    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
-    "paymentMethod" TEXT,
-    "transactionId" TEXT,
-    "gatewayResponse" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "paidAt" TIMESTAMP(3),
-    "refundedAt" TIMESTAMP(3),
-
-    CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -163,6 +180,24 @@ CREATE TABLE "_ServiceToTechnicianDetails" (
 
     CONSTRAINT "_ServiceToTechnicianDetails_AB_pkey" PRIMARY KEY ("A","B")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_email_idx" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_role_idx" ON "users"("role");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "password_reset_tokens_userId_idx" ON "password_reset_tokens"("userId");
+
+-- CreateIndex
+CREATE INDEX "locations_customerId_idx" ON "locations"("customerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "technician_details_userId_key" ON "technician_details"("userId");
@@ -189,12 +224,6 @@ CREATE INDEX "time_slots_isActive_idx" ON "time_slots"("isActive");
 CREATE INDEX "time_slots_isBookable_idx" ON "time_slots"("isBookable");
 
 -- CreateIndex
-CREATE INDEX "services_categoryId_idx" ON "services"("categoryId");
-
--- CreateIndex
-CREATE INDEX "services_isActive_idx" ON "services"("isActive");
-
--- CreateIndex
 CREATE INDEX "technician_availabilities_technicianId_status_idx" ON "technician_availabilities"("technicianId", "status");
 
 -- CreateIndex
@@ -216,19 +245,10 @@ CREATE INDEX "bookings_technicianId_idx" ON "bookings"("technicianId");
 CREATE INDEX "bookings_serviceId_idx" ON "bookings"("serviceId");
 
 -- CreateIndex
+CREATE INDEX "bookings_locationId_idx" ON "bookings"("locationId");
+
+-- CreateIndex
 CREATE INDEX "bookings_status_idx" ON "bookings"("status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "payments_bookingId_key" ON "payments"("bookingId");
-
--- CreateIndex
-CREATE INDEX "payments_bookingId_idx" ON "payments"("bookingId");
-
--- CreateIndex
-CREATE INDEX "payments_customerId_idx" ON "payments"("customerId");
-
--- CreateIndex
-CREATE INDEX "payments_status_idx" ON "payments"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "reviews_bookingId_key" ON "reviews"("bookingId");
@@ -245,14 +265,11 @@ CREATE INDEX "reviews_technicianId_idx" ON "reviews"("technicianId");
 -- CreateIndex
 CREATE INDEX "_ServiceToTechnicianDetails_B_index" ON "_ServiceToTechnicianDetails"("B");
 
--- CreateIndex
-CREATE INDEX "password_reset_tokens_userId_idx" ON "password_reset_tokens"("userId");
+-- AddForeignKey
+ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- CreateIndex
-CREATE INDEX "users_email_idx" ON "users"("email");
-
--- CreateIndex
-CREATE INDEX "users_role_idx" ON "users"("role");
+-- AddForeignKey
+ALTER TABLE "locations" ADD CONSTRAINT "locations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "technician_details" ADD CONSTRAINT "technician_details_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -276,13 +293,10 @@ ALTER TABLE "bookings" ADD CONSTRAINT "bookings_technicianId_fkey" FOREIGN KEY (
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "services"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "bookings" ADD CONSTRAINT "bookings_availabilityId_fkey" FOREIGN KEY ("availabilityId") REFERENCES "technician_availabilities"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "bookings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_availabilityId_fkey" FOREIGN KEY ("availabilityId") REFERENCES "technician_availabilities"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "bookings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
