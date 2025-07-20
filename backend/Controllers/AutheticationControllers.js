@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const {PrismaClient} = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const emailService = require('../Configuration/EmailConfig');
@@ -14,10 +14,10 @@ prisma.$connect();
 // Customer SignUp or Admin Controllers
 const CustomerOrAdminSignUp = async (req, res) => {
     try {
-        // Extract the user from request body 
+        // Extract the user from request body
         const { fullName, email, password, phoneNumber } = req.body;
 
-        // Input validation 
+        // Input validation
         if (!fullName || !email || !password || !phoneNumber) {
             return res.status(400).json({ message: 'All fields are required' });
         }
@@ -45,7 +45,7 @@ const CustomerOrAdminSignUp = async (req, res) => {
             }
         });
 
-        // Generate JWT token 
+        // Generate JWT token
         const VerificationToken = jwt.sign(
             { userId: newUser.id },
             process.env.JWT_SECRET_KEY,
@@ -161,20 +161,20 @@ const TechnicianSignUp = async (req, res) => {
 
         // Handle the case where field names might have trailing spaces
         const ageValue = age || req.body['age '] || req.body[' age'] || req.body[' age '];
-        
+
         // Check for required fields
-        if (!fullName?.trim() || !email?.trim() || !password?.trim() || 
-            !phoneNumber?.trim() || !gender?.trim() || !ageValue || 
+        if (!fullName?.trim() || !email?.trim() || !password?.trim() ||
+            !phoneNumber?.trim() || !gender?.trim() || !ageValue ||
             !dateOfBirth?.trim() || !experience?.trim() || !specialization?.trim()) {
-            
-            return res.status(400).json({ 
+
+            return res.status(400).json({
                 message: 'All fields are required'
             });
         }
 
         // Check if files were uploaded
         if (!req.files || !req.files.profileImage || !req.files.certificateDocument) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Profile image and certificate are required'
             });
         }
@@ -194,13 +194,13 @@ const TechnicianSignUp = async (req, res) => {
 
         // Upload profile image to 'images' bucket
         const imageUploadResult = await uploadToSupabase(
-            profileImageFile, 
-            'images', 
+            profileImageFile,
+            'images',
             'technician-profiles'
         );
 
         if (!imageUploadResult.success) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 message: 'Failed to upload profile image',
                 error: imageUploadResult.error
             });
@@ -208,16 +208,16 @@ const TechnicianSignUp = async (req, res) => {
 
         // Upload certificate to 'documents' bucket
         const certificateUploadResult = await uploadToSupabase(
-            certificateFile, 
-            'documents', 
+            certificateFile,
+            'documents',
             'technician-certificates'
         );
 
         if (!certificateUploadResult.success) {
             // Clean up uploaded image if certificate upload fails
             await deleteFromSupabase('images', imageUploadResult.fileName);
-            
-            return res.status(500).json({ 
+
+            return res.status(500).json({
                 message: 'Failed to upload certificate document',
                 error: certificateUploadResult.error
             });
@@ -269,7 +269,7 @@ const TechnicianSignUp = async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        // Create Welcome email HTML 
+        // Create Welcome email HTML
         const welcomeHtml = `
         <!DOCTYPE html>
         <html>
@@ -357,9 +357,9 @@ const TechnicianSignUp = async (req, res) => {
 
     } catch (error) {
         console.error('Error during technician sign up:', error);
-        return res.status(500).json({ 
-            message: 'Internal server error', 
-            error: error.message 
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };
@@ -381,7 +381,7 @@ const Login = async (req, res) => {
         const user = await prisma.users.findUnique({
             where: { email },
             include: {
-                technicianDetails: true 
+                technicianDetails: true
             }
         });
 
@@ -392,8 +392,8 @@ const Login = async (req, res) => {
 
         // Check if user account is active
         if (!user.isActive) {
-            return res.status(403).json({ 
-                message: 'Your account has been deactivated. Please contact support.' 
+            return res.status(403).json({
+                message: 'Your account has been deactivated. Please contact support.'
             });
         }
 
@@ -402,7 +402,7 @@ const Login = async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        
+
         // Role-based status validation
         switch (user.role) {
             case 'CUSTOMER':
@@ -410,7 +410,7 @@ const Login = async (req, res) => {
 
             case 'ADMIN':
                 break;
-                
+
             case 'TECHNICIAN':
                 // Special validation for technicians
                 if (!user.technicianDetails) {
@@ -425,7 +425,7 @@ const Login = async (req, res) => {
                         message: 'Your technician account is not approved. Please wait for approval before logging in'
                     });
                 }
-                 
+
                 if (user.technicianDetails.approvalStatus === 'REJECTED') {
                     return res.status(403).json({
                         message: 'Your technician account has been rejected. Please contact support for assistance.'
@@ -433,16 +433,16 @@ const Login = async (req, res) => {
                 }
 
                 if (user.technicianDetails.approvalStatus !== 'APPROVED') {
-                    return res.status(403).json({ 
-                        message: 'Your technician account is not approved. Please wait for the admin to approve them please' 
+                    return res.status(403).json({
+                        message: 'Your technician account is not approved. Please wait for the admin to approve them please'
                     });
                 }
 
                 break;
 
             default:
-                return res.status(403).json({ 
-                    message: 'Invalid user role. Please contact support.' 
+                return res.status(403).json({
+                    message: 'Invalid user role. Please contact support.'
                 });
         }
 
@@ -472,7 +472,7 @@ const Login = async (req, res) => {
         // Role-specific response message
         const roleMessage = {
             CUSTOMER: 'Customer login successful',
-            ADMIN: 'Administrator login successful', 
+            ADMIN: 'Administrator login successful',
             TECHNICIAN: 'Technician login successful'
         };
 

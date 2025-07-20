@@ -66,8 +66,8 @@ const navigationMenus = {
   ],
 }
 
-export function DashboardLayout({ 
-  children, 
+export function DashboardLayout({
+  children,
   userType,
   userInfo
 }: DashboardLayoutProps) {
@@ -137,7 +137,7 @@ export function DashboardLayout({
               )}
               onClick={() => setSidebarOpen(false)}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon />
               <span>{item.label}</span>
             </Link>
           )

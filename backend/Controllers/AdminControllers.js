@@ -196,7 +196,7 @@ const getAllTechnicians = async (req, res) => {
             userId: true,
             gender: true,
             age: true,
-            DateOfBirth: true,  // Note: Capital D and B as shown in error
+            dateOfBirth: true,  // Note: Capital D and B as shown in error
             experience: true,
             specialization: true,
             imageUtl: true,     // Note: imageUtl not imageUrl
@@ -268,7 +268,7 @@ const getAllTechnicians = async (req, res) => {
         userId: tech.technicianDetails.userId,
         gender: tech.technicianDetails.gender,
         age: tech.technicianDetails.age,
-        dateOfBirth: tech.technicianDetails.DateOfBirth, // Using correct field name
+        dateOfBirth: tech.technicianDetails.dateOfBirth, // Using correct field name
         experience: tech.technicianDetails.experience,
         specialization: tech.technicianDetails.specialization,
         approvalStatus: tech.technicianDetails.approvalStatus,
@@ -670,7 +670,7 @@ const getTechnicianDetails = async (req, res) => {
             userId: true,
             gender: true,
             age: true,
-            DateOfBirth: true,
+            dateOfBirth: true,
             experience: true,
             specialization: true,
             imageUtl: true,
