@@ -33,9 +33,13 @@ export interface SignUpRequest {
 
 export interface TechnicianSignUpRequest extends SignUpRequest {
   specialties?: string[];
-  experience?: number;
-  profileImage?: File;
+  experience: number;
+  profileImage: File;
   certificateDocument?: File;
+  gender: string;
+  age: number;
+  DateOfBirth: string;
+  specialization: string;
 }
 
 export interface SignUpResponse {

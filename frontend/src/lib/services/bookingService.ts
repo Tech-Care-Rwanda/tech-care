@@ -1,10 +1,49 @@
 /**
  * Booking Service for TechCare Frontend
- * Handles booking-related API calls and mock data until backend is ready
+ * Handles booking-related API calls to backend
  */
 
-import { apiService, ApiResponse } from './api'
+import { apiService, ApiResponse, ApiError } from './api'
+import { API_ENDPOINTS } from '@/lib/config/api'
 
+// Backend booking categories
+export type BookingCategory = 
+    | 'COMPUTER_REPAIR' | 'LAPTOP_REPAIR' | 'PHONE_REPAIR' | 'TABLET_REPAIR'
+    | 'NETWORK_SETUP' | 'SOFTWARE_INSTALLATION' | 'DATA_RECOVERY'
+    | 'VIRUS_REMOVAL' | 'HARDWARE_UPGRADE' | 'CONSULTATION'
+
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+// Backend booking response format
+export interface BackendBooking {
+    id: string
+    customerId: string
+    technicianId: string | null
+    title: string
+    description: string
+    category: BookingCategory
+    status: BookingStatus
+    scheduledAt: string | null
+    location: string
+    estimatedHours: number | null
+    completedAt: string | null
+    createdAt: string
+    updatedAt: string
+    customer: {
+        id: string
+        fullName: string
+        email: string
+        phoneNumber: string
+    }
+    technician: {
+        id: string
+        fullName: string
+        email: string
+        phoneNumber: string
+    } | null
+}
+
+// Frontend booking format (for backward compatibility)
 export interface Booking {
     id: string
     technicianId: string
@@ -38,6 +77,17 @@ export interface CreateBookingData {
     deviceCount: number
 }
 
+// Backend create booking format
+export interface BackendCreateBookingData {
+    technicianId?: string
+    title: string
+    description: string
+    category: BookingCategory
+    scheduledAt?: string
+    location: string
+    estimatedHours?: number
+}
+
 export interface BookingStats {
     total: number
     pending: number
@@ -47,20 +97,107 @@ export interface BookingStats {
 }
 
 class BookingService {
+    // Transform backend booking to frontend format
+    private transformBooking(backendBooking: BackendBooking): Booking {
+        return {
+            id: backendBooking.id,
+            technicianId: backendBooking.technicianId || '',
+            customerId: backendBooking.customerId,
+            technician: backendBooking.technician ? {
+                name: backendBooking.technician.fullName,
+                image: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg', // Default image
+                rating: 4.8, // TODO: Get from reviews when implemented
+                reviews: 100, // TODO: Get actual review count
+                phone: backendBooking.technician.phoneNumber
+            } : {
+                name: 'Unassigned',
+                image: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
+                rating: 0,
+                reviews: 0,
+                phone: ''
+            },
+            service: this.formatCategory(backendBooking.category),
+            description: backendBooking.description,
+            date: backendBooking.scheduledAt ? new Date(backendBooking.scheduledAt).toLocaleDateString() : 'Not scheduled',
+            time: backendBooking.scheduledAt ? new Date(backendBooking.scheduledAt).toLocaleTimeString() : '',
+            location: backendBooking.location,
+            price: `${(backendBooking.estimatedHours || 1) * 5000} RWF`, // TODO: Get actual pricing
+            status: backendBooking.status.toLowerCase() as Booking['status'],
+            bookingDate: new Date(backendBooking.createdAt).toLocaleDateString(),
+            devices: [] // TODO: Extract from description or add to backend
+        }
+    }
+
+    // Format category for display
+    private formatCategory(category: BookingCategory): string {
+        return category.split('_').map(word => 
+            word.charAt(0) + word.slice(1).toLowerCase()
+        ).join(' ')
+    }
+
+    // Map frontend service to backend category
+    private mapServiceToCategory(service: string): BookingCategory {
+        const serviceMap: Record<string, BookingCategory> = {
+            'computer repair': 'COMPUTER_REPAIR',
+            'laptop repair': 'LAPTOP_REPAIR',
+            'phone repair': 'PHONE_REPAIR',
+            'tablet repair': 'TABLET_REPAIR',
+            'network setup': 'NETWORK_SETUP',
+            'wifi setup': 'NETWORK_SETUP',
+            'software installation': 'SOFTWARE_INSTALLATION',
+            'data recovery': 'DATA_RECOVERY',
+            'virus removal': 'VIRUS_REMOVAL',
+            'hardware upgrade': 'HARDWARE_UPGRADE',
+            'consultation': 'CONSULTATION'
+        }
+
+        const normalizedService = service.toLowerCase()
+        for (const [key, value] of Object.entries(serviceMap)) {
+            if (normalizedService.includes(key)) {
+                return value
+            }
+        }
+        
+        return 'CONSULTATION' // Default category
+    }
+
     // Get user's bookings
     async getUserBookings(): Promise<ApiResponse<Booking[]>> {
         try {
-            // TODO: Implement real API call when backend is ready
-            // const response = await apiService.get('/bookings')
+            const response = await apiService.get<BackendBooking[]>(API_ENDPOINTS.BOOKING.GET_ALL)
+            
+            if (response.success && response.data) {
+                const transformedBookings = response.data.map(booking => 
+                    this.transformBooking(booking)
+                )
+                return {
+                    success: true,
+                    data: transformedBookings
+                }
+            }
 
-            // For now, return mock data
-            const mockBookings = this.getMockBookings()
-
+            // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+            // console.warn('Failed to fetch bookings from API, using mock data')
+            // const mockBookings = this.getMockBookings()
+            // return {
+            //     success: true,
+            //     data: mockBookings
+            // }
+            
             return {
-                success: true,
-                data: mockBookings
+                success: false,
+                error: response.error || 'Failed to fetch bookings'
             }
         } catch (error) {
+            console.error('Error fetching bookings:', error)
+            
+            // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+            // const mockBookings = this.getMockBookings()
+            // return {
+            //     success: true,
+            //     data: mockBookings
+            // }
+            
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch bookings'
@@ -71,40 +208,36 @@ class BookingService {
     // Create new booking
     async createBooking(bookingData: CreateBookingData): Promise<ApiResponse<Booking>> {
         try {
-            // TODO: Implement real API call when backend is ready
-            // const response = await apiService.post('/bookings', bookingData)
-
-            // For now, create mock booking
-            const mockBooking: Booking = {
-                id: Date.now().toString(),
-                technicianId: bookingData.technicianId,
-                customerId: 'current-user', // TODO: Get from auth context
-                technician: {
-                    name: 'John Mugisha', // TODO: Get from technician data
-                    image: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
-                    rating: 5.0,
-                    reviews: 318,
-                    phone: '+250 788 123 456'
-                },
-                service: bookingData.service,
+            // Prepare backend format
+            const backendData: BackendCreateBookingData = {
+                technicianId: bookingData.technicianId || undefined,
+                title: bookingData.service,
                 description: bookingData.description,
-                date: bookingData.date,
-                time: bookingData.time,
+                category: this.mapServiceToCategory(bookingData.service),
+                scheduledAt: this.combineDateAndTime(bookingData.date, bookingData.time),
                 location: bookingData.location,
-                price: '15,000 RWF',
-                status: 'pending',
-                bookingDate: new Date().toISOString(),
-                devices: [`${bookingData.deviceCount} device(s)`]
+                estimatedHours: bookingData.urgency === 'urgent' ? 2 : 4 // Estimate based on urgency
             }
 
-            // Store in localStorage for now
-            this.storeBookingLocally(mockBooking)
+            const response = await apiService.post<{ booking: BackendBooking }>(
+                API_ENDPOINTS.BOOKING.CREATE, 
+                backendData
+            )
+
+            if (response.success && response.data) {
+                const transformedBooking = this.transformBooking(response.data.booking)
+                return {
+                    success: true,
+                    data: transformedBooking
+                }
+            }
 
             return {
-                success: true,
-                data: mockBooking
+                success: false,
+                error: response.error || 'Failed to create booking'
             }
         } catch (error) {
+            console.error('Error creating booking:', error)
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to create booking'
@@ -112,30 +245,57 @@ class BookingService {
         }
     }
 
+    // Helper to combine date and time strings
+    private combineDateAndTime(date: string, time: string): string {
+        try {
+            // Parse date (assumes format like "2025-01-15")
+            const datePart = new Date(date)
+            
+            // Extract time (assumes format like "2:00 PM - 4:00 PM", take start time)
+            const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/)
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1])
+                const minutes = parseInt(timeMatch[2])
+                const period = timeMatch[3]
+                
+                if (period === 'PM' && hours !== 12) hours += 12
+                if (period === 'AM' && hours === 12) hours = 0
+                
+                datePart.setHours(hours, minutes, 0, 0)
+            }
+            
+            return datePart.toISOString()
+        } catch {
+            // Return current time if parsing fails
+            return new Date().toISOString()
+        }
+    }
+
     // Update booking status
     async updateBookingStatus(bookingId: string, status: Booking['status']): Promise<ApiResponse<Booking>> {
         try {
-            // TODO: Implement real API call when backend is ready
-            // const response = await apiService.put(`/bookings/${bookingId}`, { status })
+            // Convert frontend status to backend format
+            const backendStatus = status.toUpperCase() as BookingStatus
 
-            // For now, update mock data
-            const bookings = this.getMockBookings()
-            const booking = bookings.find(b => b.id === bookingId)
+            const response = await apiService.put<{ booking: BackendBooking }>(
+                API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId),
+                { status: backendStatus }
+            )
 
-            if (!booking) {
+            if (response.success && response.data) {
+                const transformedBooking = this.transformBooking(response.data.booking)
                 return {
-                    success: false,
-                    error: 'Booking not found'
+                    success: true,
+                    data: transformedBooking
                 }
             }
 
-            booking.status = status
-
             return {
-                success: true,
-                data: booking
+                success: false,
+                error: response.error || 'Failed to update booking status'
             }
         } catch (error) {
+            console.error('Error updating booking status:', error)
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to update booking'
@@ -146,11 +306,24 @@ class BookingService {
     // Cancel booking
     async cancelBooking(bookingId: string): Promise<ApiResponse<void>> {
         try {
-            // TODO: Implement real API call when backend is ready
-            // const response = await apiService.delete(`/bookings/${bookingId}`)
+            const response = await apiService.put(
+                API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId),
+                { status: 'CANCELLED' }
+            )
 
-            return this.updateBookingStatus(bookingId, 'cancelled')
+            if (response.success) {
+                return {
+                    success: true,
+                    data: undefined
+                }
+            }
+
+            return {
+                success: false,
+                error: response.error || 'Failed to cancel booking'
+            }
         } catch (error) {
+            console.error('Error cancelling booking:', error)
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to cancel booking'
@@ -191,15 +364,9 @@ class BookingService {
         }
     }
 
-    // Get mock bookings data
-    getMockBookings(): Booking[] {
-        // Try to get from localStorage first
-        const stored = this.getStoredBookings()
-        if (stored.length > 0) {
-            return stored
-        }
-
-        // Default mock data
+    // Get mock bookings data (fallback only)
+    private getMockBookings(): Booking[] {
+        // Default mock data for fallback
         return [
             {
                 id: "1",
@@ -288,21 +455,6 @@ class BookingService {
         ]
     }
 
-    // Local storage helpers
-    private storeBookingLocally(booking: Booking): void {
-        const stored = this.getStoredBookings()
-        stored.push(booking)
-        localStorage.setItem('techcare-bookings', JSON.stringify(stored))
-    }
-
-    private getStoredBookings(): Booking[] {
-        try {
-            const stored = localStorage.getItem('techcare-bookings')
-            return stored ? JSON.parse(stored) : []
-        } catch {
-            return []
-        }
-    }
 }
 
 export const bookingService = new BookingService()

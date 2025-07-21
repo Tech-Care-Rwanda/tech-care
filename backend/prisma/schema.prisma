@@ -139,6 +139,14 @@ model TechnicianDetails {
   isAvailable     Boolean  @default(true)
   rate            Int      @default(0)
   approvalStatus TechnicianApprovalStatus @default(PENDING)
+  
+  // Location fields for map functionality
+  latitude        Float?
+  longitude       Float?
+  address         String?  // Human readable address
+  district        String?  // Kigali district
+  lastLocationUpdate DateTime? // When location was last updated
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

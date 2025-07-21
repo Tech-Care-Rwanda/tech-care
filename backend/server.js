@@ -9,6 +9,7 @@ const CategoryRoutes = require('./routes/Category/CategoryRoutes');
 const ServicesRoutes = require('./routes/Services/ServicesRoutes');
 const BookingRoutes = require('./routes/BookingRoutes')
 const TechnicianRoutes = require('./routes/TechnicianRoutes')
+const NearbyTechniciansRoutes = require('./routes/NearbyTechniciansRoutes')
 const path = require('path');
 
 // Load environment variables
@@ -63,6 +64,7 @@ app.use('/api/v1/categories', CategoryRoutes);
 app.use('api/v1/services', ServicesRoutes);
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/technicians', TechnicianRoutes);
+app.use('/api/v1/technicians', NearbyTechniciansRoutes);
 
 // Health check route
 app.get('/health', async (req, res) => {

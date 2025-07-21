@@ -20,7 +20,8 @@ export function getRoleBasedDashboardRoute(role: ApiRole): string {
  * Determines the appropriate redirect route after login
  */
 export function getPostLoginRedirect(role: ApiRole): string {
-    return getRoleBasedDashboardRoute(role)
+    // Redirect all users to the landing page after login
+    return '/'
 }
 
 /**

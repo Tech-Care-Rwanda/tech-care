@@ -3,11 +3,10 @@
 import * as React from "react"
 import Link from "next/link"
 import { Menu, X, User, LogOut, Settings, Bell, ChevronDown } from "lucide-react"
-import { cn, UserRole, Language } from "@/lib/utils"
+import { cn, UserRole } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { LanguageSwitcher } from "@/components/ui/language-switcher"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 
@@ -18,58 +17,28 @@ interface HeaderProps {
 
 const navigationItems = {
   guest: [
-    { label: "Services", href: "/services" },
-    { label: "Find Technicians", href: "/technicians" },
-    { label: "How it Works", href: "/learn" },
+    { label: "Find Technicians", href: "/" },
   ],
   customer: [
-    { label: "Find Technicians", href: "/technicians" },
+    { label: "Find Technicians", href: "/" },
     { label: "My Bookings", href: "/dashboard/bookings" },
-    { label: "Services", href: "/services" },
   ],
   technician: [
-    { label: "My Jobs", href: "/dashboard/jobs" },
-    { label: "Calendar", href: "/dashboard/calendar" },
-    { label: "Earnings", href: "/dashboard/earnings" },
-    { label: "Profile", href: "/dashboard/profile" },
+    { label: "Find Clients", href: "/" },
+    { label: "My Jobs", href: "/dashboard/bookings" },
   ],
   admin: [
-    { label: "Dashboard", href: "/admin" },
-    { label: "Users", href: "/admin/users" },
-    { label: "Technicians", href: "/admin/technicians" },
-    { label: "Reports", href: "/admin/reports" },
+    { label: "Map View", href: "/" },
+    { label: "Bookings", href: "/dashboard/bookings" },
   ],
 }
 
 export function Header({ userType = null, variant = "default" }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
-  const [currentLang, setCurrentLang] = React.useState<Language>("en")
 
   // Use auth context user role, fallback to prop
   const effectiveUserType = user?.role || userType
-
-  // Initialize language from localStorage on mount
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('techcare-language') as Language
-      if (savedLang && (savedLang === 'en' || savedLang === 'rw' || savedLang === 'fr')) {
-        setCurrentLang(savedLang)
-      }
-    }
-  }, [])
-
-  // Handle language change with proper synchronization
-  const handleLanguageChange = React.useCallback((newLang: Language) => {
-    setCurrentLang(newLang)
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('techcare-language', newLang)
-      }
-    } catch (error) {
-      console.warn('Failed to save language preference:', error)
-    }
-  }, [setCurrentLang])
 
   // Ensure effectiveUserType is a valid key of navigationItems, fallback to 'guest'
   const navItems =
@@ -133,14 +102,6 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            {/* Language Switcher with Globe Icon */}
-            <div className="hidden sm:block">
-              <LanguageSwitcher
-                currentLanguage={currentLang}
-                onLanguageChange={handleLanguageChange}
-                variant="button"
-              />
-            </div>
 
             {/* Authenticated User Menu */}
             {isAuthenticated ? (
@@ -180,13 +141,9 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard'}>
+                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard/bookings'}>
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard/settings'}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>My Bookings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>
@@ -301,10 +258,6 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 <>
                   <Separator className="my-4" />
                   <div className="space-y-2">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Button>
                     <Button
                       variant="ghost"
                       className="w-full justify-start text-destructive"
@@ -320,18 +273,6 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                 </>
               )}
 
-              <Separator className="my-4" />
-
-              {/* Mobile Language Switcher */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Language</p>
-                <LanguageSwitcher
-                  currentLanguage={currentLang}
-                  onLanguageChange={handleLanguageChange}
-                  variant="dropdown"
-                  className="w-full"
-                />
-              </div>
             </nav>
           </div>
         </div>

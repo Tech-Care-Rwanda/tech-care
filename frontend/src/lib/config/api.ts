@@ -4,7 +4,7 @@
  */
 
 export const API_CONFIG = {
-    BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+    BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
     VERSION: process.env.NEXT_PUBLIC_API_VERSION || 'v1',
     TIMEOUT: 10000, // 10 seconds
 
@@ -49,7 +49,9 @@ export const API_ENDPOINTS = {
         PROFILE: '/api/v1/technicians/profile',
         GET_ALL: '/api/v1/technicians',
         GET_BY_ID: (id: string) => `/api/v1/technicians/${id}`,
-        UPDATE_AVAILABILITY: '/api/v1/technicians/availability'
+        UPDATE_AVAILABILITY: '/api/v1/technicians/availability',
+        GET_NEARBY: (lat: number, lng: number, radius = 10, limit = 20) => 
+            `/api/v1/technicians/nearby?lat=${lat}&lng=${lng}&radius=${radius}&limit=${limit}`
     },
 
     // Booking endpoints

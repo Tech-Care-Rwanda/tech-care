@@ -20,18 +20,19 @@ import { Separator } from "@/components/ui/separator"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import apiService from "@/lib/services/api"
+import bookingService from "@/lib/services/bookingService"
 
 interface Technician {
-  id: number
+  id: string
   name: string
-  image?: string
+  avatar?: string
   specialty: string
   rating: number
   reviews: number
   hourlyRate: number
   location: string
-  availability: string[]
-  services: string[]
+  responseTime: string
+  isAvailable: boolean
 }
 
 interface Service {
@@ -44,7 +45,7 @@ interface Service {
 export default function BookTechnicianPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { } = useAuth() // user not needed for now
   const technicianId = params.technicianId as string
   
   const [currentStep, setCurrentStep] = useState(1)
@@ -71,7 +72,20 @@ export default function BookTechnicianPage() {
         const response = await apiService.technician.getTechnician(technicianId)
         
         if (response.success && response.data) {
-          setTechnician(response.data)
+          // Transform API response to match component expectations
+          const techData = response.data
+          setTechnician({
+            id: techData.id.toString(),
+            name: techData.fullName || techData.name || 'Technician',
+            specialty: techData.technicianDetails?.specialization || 'Tech Support',
+            rating: 4.8, // TODO: Calculate from reviews
+            reviews: 0, // TODO: Get actual review count
+            hourlyRate: techData.technicianDetails?.rate || 15000,
+            location: techData.technicianDetails?.address || 'Kigali',
+            responseTime: '~15 min',
+            isAvailable: techData.technicianDetails?.isAvailable || false,
+            avatar: techData.technicianDetails?.imageUrl
+          })
         } else {
           setError('Failed to load technician data')
         }
@@ -128,10 +142,37 @@ export default function BookTechnicianPage() {
     }
   }
 
-  const handleBooking = () => {
-    // In real app, this would submit to backend
-    console.log("Booking submitted:", { technician, bookingData, total: calculateTotal() })
-    router.push('/dashboard/bookings?new=true')
+  const handleBooking = async () => {
+    try {
+      setLoading(true)
+      
+      // Get the selected service name
+      const selectedService = services.find(s => s.id === bookingData.service)
+      
+      // Create booking via backend API
+      const response = await bookingService.createBooking({
+        technicianId: technicianId,
+        service: selectedService?.name || 'Consultation',
+        description: bookingData.description,
+        date: bookingData.date,
+        time: bookingData.time,
+        location: bookingData.location,
+        urgency: bookingData.urgency,
+        deviceCount: bookingData.deviceCount
+      })
+
+      if (response.success) {
+        // Redirect to bookings page with success message
+        router.push('/dashboard/bookings?new=true&success=true')
+      } else {
+        setError(response.error || 'Failed to create booking')
+      }
+    } catch (err) {
+      console.error('Error creating booking:', err)
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Show loading state

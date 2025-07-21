@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, Upload, X, Eye, EyeOff, Loader2, Users, Wrench } from 'lucide-react'
+import { CheckCircle, Upload, Eye, EyeOff, Loader2, Users, Wrench } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { getPostSignupRedirect } from '@/lib/utils/authUtils'
 
@@ -104,13 +104,49 @@ export default function SignupPage() {
   }
 
   const validateTechnicianForm = (): boolean => {
-    if (!technicianData.fullName || !technicianData.email || !technicianData.phoneNumber ||
-      !technicianData.password || !technicianData.gender || !technicianData.age ||
-      !technicianData.DateOfBirth || !technicianData.experience || !technicianData.specialization) {
-      setError('Please fill in all required fields')
+    // Check required fields
+    if (!technicianData.fullName.trim()) {
+      setError('Full name is required')
+      return false
+    }
+    if (!technicianData.email.trim()) {
+      setError('Email is required')
+      return false
+    }
+    if (!technicianData.phoneNumber.trim()) {
+      setError('Phone number is required')
+      return false
+    }
+    if (!technicianData.password) {
+      setError('Password is required')
+      return false
+    }
+    if (!technicianData.gender) {
+      setError('Gender is required')
+      return false
+    }
+    if (!technicianData.age || technicianData.age < 18 || technicianData.age > 100) {
+      setError('Age must be between 18 and 100')
+      return false
+    }
+    if (!technicianData.DateOfBirth) {
+      setError('Date of birth is required')
+      return false
+    }
+    if (!technicianData.experience) {
+      setError('Experience level is required')
+      return false
+    }
+    if (!technicianData.specialization) {
+      setError('Specialization is required')
+      return false
+    }
+    if (!technicianData.profileImage) {
+      setError('Profile image is required')
       return false
     }
 
+    // Check password requirements
     if (technicianData.password !== technicianData.confirmPassword) {
       setError('Passwords do not match')
       return false
@@ -121,8 +157,10 @@ export default function SignupPage() {
       return false
     }
 
-    if (technicianData.age < 18 || technicianData.age > 100) {
-      setError('Age must be between 18 and 100')
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(technicianData.email)) {
+      setError('Please enter a valid email address')
       return false
     }
 
@@ -147,7 +185,8 @@ export default function SignupPage() {
       } else {
         setError(result.error || 'Registration failed. Please try again.')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Registration error:', error)
       setError('An unexpected error occurred. Please try again.')
     }
   }
@@ -156,17 +195,26 @@ export default function SignupPage() {
     if (!validateTechnicianForm()) return
 
     try {
+      // Convert experience string to number based on selection
+      const getExperienceNumber = (exp: string): number => {
+        if (exp.includes('0-1')) return 1
+        if (exp.includes('1-3')) return 2
+        if (exp.includes('3-5')) return 4
+        if (exp.includes('5+')) return 6
+        return 0
+      }
+
       const result = await technicianRegister({
-        fullName: technicianData.fullName,
-        email: technicianData.email,
-        phoneNumber: technicianData.phoneNumber,
+        fullName: technicianData.fullName.trim(),
+        email: technicianData.email.trim(),
+        phoneNumber: technicianData.phoneNumber.trim(),
         password: technicianData.password,
         gender: technicianData.gender,
-        age: technicianData.age,
+        age: parseInt(technicianData.age.toString()) || 0,
         DateOfBirth: technicianData.DateOfBirth,
-        experience: technicianData.experience,
+        experience: getExperienceNumber(technicianData.experience),
         specialization: technicianData.specialization,
-        profileImage: technicianData.profileImage,
+        profileImage: technicianData.profileImage!,
         certificateDocument: technicianData.certificateDocument
       })
 
@@ -177,7 +225,8 @@ export default function SignupPage() {
       } else {
         setError(result.error || 'Registration failed. Please try again.')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Registration error:', error)
       setError('An unexpected error occurred. Please try again.')
     }
   }
@@ -279,6 +328,7 @@ export default function SignupPage() {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
           placeholder="your.email@example.com"
           disabled={isLoading}
+          autoComplete="email"
         />
       </div>
 
@@ -314,6 +364,7 @@ export default function SignupPage() {
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="Create a secure password"
             disabled={isLoading}
+            autoComplete="new-password"
           />
           <button
             type="button"
@@ -341,6 +392,7 @@ export default function SignupPage() {
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="Confirm your password"
             disabled={isLoading}
+            autoComplete="new-password"
           />
           <button
             type="button"
@@ -401,6 +453,7 @@ export default function SignupPage() {
             id="fullName"
             name="fullName"
             required
+            autoComplete="name"
             value={technicianData.fullName}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -418,6 +471,7 @@ export default function SignupPage() {
             id="email"
             name="email"
             required
+            autoComplete="email"
             value={technicianData.email}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -437,6 +491,7 @@ export default function SignupPage() {
             id="phoneNumber"
             name="phoneNumber"
             required
+            autoComplete="tel"
             value={technicianData.phoneNumber}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -478,6 +533,7 @@ export default function SignupPage() {
             required
             min="18"
             max="100"
+            autoComplete="bday"
             value={technicianData.age || ''}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -495,6 +551,7 @@ export default function SignupPage() {
             id="DateOfBirth"
             name="DateOfBirth"
             required
+            autoComplete="bday"
             value={technicianData.DateOfBirth}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -513,6 +570,7 @@ export default function SignupPage() {
             id="password"
             name="password"
             required
+            autoComplete="new-password"
             value={technicianData.password}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -540,6 +598,7 @@ export default function SignupPage() {
             id="confirmPassword"
             name="confirmPassword"
             required
+            autoComplete="new-password"
             value={technicianData.confirmPassword}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -631,7 +690,7 @@ export default function SignupPage() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Profile Image
+          Profile Image *
         </label>
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-red-500 transition-colors">
           <input
@@ -643,12 +702,14 @@ export default function SignupPage() {
             }}
             className="hidden"
             id="profileImage"
+            name="profileImage"
+            required
             disabled={isLoading}
           />
           <label htmlFor="profileImage" className="cursor-pointer">
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600">
-              {technicianData.profileImage ? technicianData.profileImage.name : 'Upload profile image (optional)'}
+              {technicianData.profileImage ? technicianData.profileImage.name : 'Upload profile image (required)'}
             </p>
           </label>
         </div>
@@ -668,6 +729,8 @@ export default function SignupPage() {
             }}
             className="hidden"
             id="certificateDocument"
+            name="certificateDocument"
+            required
             disabled={isLoading}
           />
           <label htmlFor="certificateDocument" className="cursor-pointer">

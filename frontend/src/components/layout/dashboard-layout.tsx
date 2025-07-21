@@ -3,19 +3,10 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { 
-  Calendar, 
-  DollarSign, 
-  Home, 
-  Settings, 
-  User, 
-  Users, 
-  Wrench,
-  FileText,
-  Bell,
+import {
+  Calendar,
+  User,
   Search,
-  TrendingUp,
-  Shield,
   Menu
 } from "lucide-react"
 import { cn, UserRole } from "@/lib/utils"
@@ -37,37 +28,24 @@ interface DashboardLayoutProps {
 
 const navigationMenus = {
   customer: [
-    { icon: Home, label: "Dashboard", href: "/dashboard" },
-    { icon: Search, label: "Find Technicians", href: "/dashboard/search" },
+    { icon: Search, label: "Find Technicians", href: "/" },
     { icon: Calendar, label: "My Bookings", href: "/dashboard/bookings" },
-    { icon: FileText, label: "Service History", href: "/dashboard/history" },
-    { icon: Users, label: "Saved Technicians", href: "/dashboard/favorites" },
-    { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
     { icon: User, label: "Profile", href: "/dashboard/profile" },
-    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
   ],
   technician: [
-    { icon: Home, label: "Dashboard", href: "/dashboard" },
-    { icon: Wrench, label: "My Jobs", href: "/dashboard/jobs" },
-    { icon: Calendar, label: "Schedule", href: "/dashboard/schedule" },
-    { icon: DollarSign, label: "Earnings", href: "/dashboard/earnings" },
-    { icon: TrendingUp, label: "Analytics", href: "/dashboard/analytics" },
+    { icon: Search, label: "Find Clients", href: "/" },
+    { icon: Calendar, label: "My Jobs", href: "/dashboard/bookings" },
     { icon: User, label: "Profile", href: "/dashboard/profile" },
-    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
   ],
   admin: [
-    { icon: Home, label: "Dashboard", href: "/admin" },
-    { icon: Users, label: "Users", href: "/admin/users" },
-    { icon: Wrench, label: "Technicians", href: "/admin/technicians" },
-    { icon: FileText, label: "Bookings", href: "/admin/bookings" },
-    { icon: TrendingUp, label: "Analytics", href: "/admin/analytics" },
-    { icon: Shield, label: "Security", href: "/admin/security" },
-    { icon: Settings, label: "Settings", href: "/admin/settings" },
+    { icon: Search, label: "Map View", href: "/" },
+    { icon: Calendar, label: "Bookings", href: "/dashboard/bookings" },
+    { icon: User, label: "Profile", href: "/dashboard/profile" },
   ],
 }
 
-export function DashboardLayout({ 
-  children, 
+export function DashboardLayout({
+  children,
   userType,
   userInfo
 }: DashboardLayoutProps) {
@@ -98,7 +76,9 @@ export function DashboardLayout({
     )
   }
 
-  const menuItems = navigationMenus[effectiveUserType]
+  const menuItems = effectiveUserType && effectiveUserType in navigationMenus
+    ? navigationMenus[effectiveUserType as keyof typeof navigationMenus]
+    : []
 
   const UserBadge = () => (
     <div className="p-4 border-b">
@@ -121,9 +101,9 @@ export function DashboardLayout({
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <UserBadge />
-      
+
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
+        {menuItems && menuItems.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link
@@ -144,17 +124,6 @@ export function DashboardLayout({
         })}
       </nav>
 
-      <div className="p-4 border-t">
-        <Link href="/dashboard/notifications">
-          <Button variant="ghost" className="w-full justify-start text-sm">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
-            <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
-              3
-            </span>
-          </Button>
-        </Link>
-      </div>
     </div>
   )
 
@@ -172,9 +141,9 @@ export function DashboardLayout({
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            <div 
-              className="fixed inset-0 bg-black/20" 
-              onClick={() => setSidebarOpen(false)} 
+            <div
+              className="fixed inset-0 bg-black/20"
+              onClick={() => setSidebarOpen(false)}
             />
             <div className="fixed left-0 top-16 bottom-0 w-64 bg-card border-r">
               <SidebarContent />

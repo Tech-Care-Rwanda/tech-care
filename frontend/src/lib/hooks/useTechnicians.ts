@@ -23,13 +23,17 @@ export function useTechnicians() {
             if (response.success && response.data && response.data.length > 0) {
                 setTechnicians(response.data)
             } else {
-                // Fallback to mock data if backend is not available
-                console.warn('Backend not available, using mock data')
-                setTechnicians(technicianService.getMockTechnicians())
+                // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+                // console.warn('Backend not available, using mock data')
+                // setTechnicians(technicianService.getMockTechnicians())
+                
+                setError('Failed to load technicians from API')
             }
         } catch (err) {
-            console.warn('Error fetching technicians, using mock data:', err)
-            setTechnicians(technicianService.getMockTechnicians())
+            console.warn('Error fetching technicians:', err)
+            setError(err instanceof Error ? err.message : 'Failed to fetch technicians')
+            // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+            // setTechnicians(technicianService.getMockTechnicians())
         } finally {
             setLoading(false)
         }
@@ -64,29 +68,33 @@ export function useSearchTechnicians(filters: SearchFilters) {
             if (response.success && response.data) {
                 setTechnicians(response.data)
             } else {
-                // Fallback to filtered mock data
-                console.warn('Backend search not available, using mock data')
-                const mockData = technicianService.getMockTechnicians()
-                let filtered = mockData
+                // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+                // console.warn('Backend search not available, using mock data')
+                // const mockData = technicianService.getMockTechnicians()
+                // let filtered = mockData
 
-                // Apply basic filters to mock data
-                if (searchFilters.specialty) {
-                    filtered = filtered.filter(tech =>
-                        tech.specialties.some(spec =>
-                            spec.toLowerCase().includes(searchFilters.specialty!.toLowerCase())
-                        )
-                    )
-                }
+                // // Apply basic filters to mock data
+                // if (searchFilters.specialty) {
+                //     filtered = filtered.filter(tech =>
+                //         tech.specialties.some(spec =>
+                //             spec.toLowerCase().includes(searchFilters.specialty!.toLowerCase())
+                //         )
+                //     )
+                // }
 
-                if (searchFilters.availability === 'available') {
-                    filtered = filtered.filter(tech => tech.available)
-                }
+                // if (searchFilters.availability === 'available') {
+                //     filtered = filtered.filter(tech => tech.available)
+                // }
 
-                setTechnicians(filtered)
+                // setTechnicians(filtered)
+                
+                setError('Search failed - no data from API')
             }
         } catch (err) {
-            console.warn('Error searching technicians, using mock data:', err)
-            setTechnicians(technicianService.getMockTechnicians())
+            console.warn('Error searching technicians:', err)
+            setError(err instanceof Error ? err.message : 'Search failed')
+            // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
+            // setTechnicians(technicianService.getMockTechnicians())
         } finally {
             setLoading(false)
         }

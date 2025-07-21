@@ -77,6 +77,10 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const applyFilters = useCallback(<T extends { rating: number; priceLevel: number; isOpen: boolean; services: string[] }>(items: T[]): T[] => {
+    if (!items || !Array.isArray(items)) {
+      return []
+    }
+
     return items.filter(item => {
       // Price Level Filter
       if (searchFilters.priceRange) {
@@ -100,8 +104,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
 
       // Service Filter
       if (searchFilters.selectedServices && searchFilters.selectedServices.length > 0) {
-        const hasMatchingService = searchFilters.selectedServices.some(selectedService => 
-          item.services.some(service => 
+        const hasMatchingService = searchFilters.selectedServices.some(selectedService =>
+          item.services.some(service =>
             service.toLowerCase().includes(selectedService.toLowerCase()) ||
             selectedService.toLowerCase().includes(service.toLowerCase())
           )
@@ -142,20 +146,20 @@ export function useSearch() {
 // Helper function to convert search filters to URL parameters
 export function filtersToURLParams(filters: SearchFilters): string {
   const params = new URLSearchParams()
-  
+
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== '' && value !== false && value !== undefined && value !== null) {
       params.append(key, String(value))
     }
   })
-  
+
   return params.toString()
 }
 
 // Helper function to convert URL parameters to search filters
 export function URLParamsToFilters(searchParams: URLSearchParams): Partial<SearchFilters> {
   const filters: Partial<SearchFilters> = {}
-  
+
   searchParams.forEach((value, key) => {
     if (key in defaultFilters) {
       const filterKey = key as keyof SearchFilters
@@ -172,6 +176,6 @@ export function URLParamsToFilters(searchParams: URLSearchParams): Partial<Searc
       }
     }
   })
-  
+
   return filters
 } 

@@ -23,12 +23,12 @@ export default function LoginPage() {
 
   // Handle redirect after successful login (only after hydration completes)
   useEffect(() => {
-    if (loginSuccess && isAuthenticated && user?.role && isHydrated && typeof window !== 'undefined') {
+    if (loginSuccess && user?.role && isHydrated && typeof window !== 'undefined') {
       const redirectPath = getPostLoginRedirect(user.role)
       console.log('Redirecting to:', redirectPath)
       router.push(redirectPath)
     }
-  }, [loginSuccess, isAuthenticated, user, router, isHydrated])
+  }, [loginSuccess, user, router, isHydrated])
 
   const togglePassword = () => {
     setShowPassword(!showPassword)
@@ -51,14 +51,16 @@ export default function LoginPage() {
       if (result.success) {
         console.log('Login successful, will redirect based on user role...')
         setLoginSuccess(true)
-
-        // Get the user from localStorage since it's stored immediately
-        const storedUser = apiService.getCurrentUser()
-        if (storedUser && storedUser.role) {
-          const redirectPath = getPostLoginRedirect(storedUser.role)
-          console.log('Redirecting to:', redirectPath)
-          router.push(redirectPath)
-        }
+        
+        // Wait a bit for the user state to update, then redirect
+        setTimeout(() => {
+          const storedUser = apiService.getCurrentUser()
+          if (storedUser?.role) {
+            const redirectPath = getPostLoginRedirect(storedUser.role)
+            console.log('Redirecting to:', redirectPath)
+            router.push(redirectPath)
+          }
+        }, 100)
       } else {
         console.log('Login failed:', result.error)
         setError(result.error || 'Login failed. Please try again.')
@@ -144,6 +146,7 @@ export default function LoginPage() {
                   placeholder="Enter your email"
                   required
                   disabled={isLoading}
+                  autoComplete="email"
                 />
               </div>
 
@@ -163,6 +166,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     required
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"

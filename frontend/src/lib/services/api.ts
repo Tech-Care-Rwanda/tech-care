@@ -80,18 +80,29 @@ class ApiClient {
       );
     }
 
-    const data: ApiResponse<T> = await response.json();
+    const rawData = await response.json();
 
     if (!response.ok) {
       throw new ApiError(
-        data.message || 'Request failed',
+        rawData.message || 'Request failed',
         response.status,
-        data.error,
-        data.errors
+        rawData.error,
+        rawData.errors
       );
     }
 
-    return data;
+    // Handle backend response format - transform to expected ApiResponse format
+    if (rawData.success !== undefined) {
+      // Already in expected format
+      return rawData as ApiResponse<T>;
+    } else {
+      // Transform backend response to expected format
+      return {
+        success: true,
+        message: rawData.message || 'Success',
+        data: rawData as T
+      };
+    }
   }
 
   /**
@@ -279,7 +290,7 @@ export class AuthService {
   ): Promise<ApiResponse<SignUpResponse>> {
     const formData = new FormData();
 
-    // Add text fields
+    // Add text fields with proper type handling
     Object.entries(userData).forEach(([key, value]) => {
       if (value !== undefined && !(value instanceof File)) {
         if (Array.isArray(value)) {
@@ -436,6 +447,23 @@ class TechCareApiService {
     this.customer = new CustomerService(this.apiClient);
     this.admin = new AdminService(this.apiClient);
     this.technician = new TechnicianService(this.apiClient);
+  }
+
+  // Expose raw API methods for services that need them
+  get<T>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+    return this.apiClient.get<T>(endpoint, params);
+  }
+
+  post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.apiClient.post<T>(endpoint, data);
+  }
+
+  put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.apiClient.put<T>(endpoint, data);
+  }
+
+  delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.apiClient.delete<T>(endpoint);
   }
 
   /**
