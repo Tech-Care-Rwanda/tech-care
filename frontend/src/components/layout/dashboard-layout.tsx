@@ -123,7 +123,7 @@ export function DashboardLayout({
       <UserBadge />
       
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
+        {menuItems?.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link

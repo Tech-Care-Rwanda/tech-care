@@ -80,18 +80,73 @@ class ApiClient {
       );
     }
 
-    const data: ApiResponse<T> = await response.json();
+    // Parse the raw JSON response
+    const rawData = await response.json();
+    
+    // Check if the response is already in the expected format
+    if (rawData.hasOwnProperty('success')) {
+      return rawData as ApiResponse<T>;
+    }
+    
+    // Transform the response to match the expected format
+    const transformedResponse: ApiResponse<T> = {
+      success: response.ok,
+      message: rawData.message || (response.ok ? 'Success' : 'Request failed'),
+    };
+    
+    if (!response.ok) {
+      // For error responses
+      transformedResponse.error = rawData.error;
+      transformedResponse.errors = rawData.errors;
+    } else {
+      // For successful responses, determine what should go in the data field
+      if (rawData.hasOwnProperty('data')) {
+        // Some endpoints already wrap their data
+        transformedResponse.data = rawData.data;
+      } else {
+        // For endpoints that don't use a data wrapper, extract the relevant data
+        // Login response
+        if (rawData.token && rawData.user) {
+          transformedResponse.data = {
+            token: rawData.token,
+            user: rawData.user,
+            refreshToken: rawData.refreshToken
+          };
+        }
+        // Customer profile response
+        else if (rawData.customer) {
+          transformedResponse.data = rawData.customer;
+        }
+        // Booking response
+        else if (rawData.booking) {
+          transformedResponse.data = rawData.booking;
+        }
+        // Technician registration response
+        else if (rawData.technicianDetails) {
+          transformedResponse.data = {
+            user: rawData.user,
+            token: rawData.token,
+            technicianDetails: rawData.technicianDetails
+          };
+        }
+        // For other responses, exclude message and put everything else in data
+        else {
+          const { message, ...rest } = rawData;
+          transformedResponse.data = Object.keys(rest).length > 0 ? rest as T : null;
+        }
+      }
+    }
 
     if (!response.ok) {
       throw new ApiError(
-        data.message || 'Request failed',
+        transformedResponse.message,
         response.status,
-        data.error,
-        data.errors
+        transformedResponse.error,
+        transformedResponse.errors
       );
     }
 
-    return data;
+    return transformedResponse;
   }
 
   /**
