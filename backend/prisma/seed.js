@@ -85,15 +85,15 @@ async function main() {
 
   // Create default categories
   const categories = [
-    {name: 'Plumbing', isActive: true},
-    {name: 'Electrical', isActive: true},
-    {name: 'HVAC', isActive: true},
-    {name: 'Carpentry', isActive: true},
-    {name: 'Painting', isActive: true},
-    {name: 'Appliance Repair', isActive: true},
-    {name: 'Internet/WiFi', isActive: true},
-    {name: 'Computer Repair', isActive: true},
-    {name: 'Cleaning', isActive: true},
+    {id: 1, name: 'Plumbing', isActive: true},
+    {id: 2, name: 'Electrical', isActive: true},
+    {id: 3, name: 'HVAC', isActive: true},
+    {id: 4, name: 'Carpentry', isActive: true},
+    {id: 5, name: 'Painting', isActive: true},
+    {id: 6, name: 'Appliance Repair', isActive: true},
+    {id: 7, name: 'Internet/WiFi', isActive: true},
+    {id: 8, name: 'Computer Repair', isActive: true},
+    {id: 9, name: 'Cleaning', isActive: true},
   ];
 
   console.log('🌱 Seeding categories...');
@@ -133,7 +133,8 @@ async function main() {
     },
   ];
 
-  const technicialDetails = {
+  const technicianDetails = {
+    id: 1,
     userId: 101,
     gender: 'FEMALE',
     age: 25,
@@ -155,29 +156,171 @@ async function main() {
   }
 
   await prisma.technicianDetails.upsert({
-    where: {userId: technicialDetails.userId},
-    update: technicialDetails,
-    create: technicialDetails,
+    where: {userId: technicianDetails.userId},
+    update: technicianDetails,
+    create: technicianDetails,
   })
 
   console.log('✅ Users seeded successfully!');
 
-  const services = [];
+  const services = [
+    {
+      serviceName: 'Computer Support',
+      description: 'Complete computer setup, repair, and optimization services',
+      duration: '1–4 hours',
+      imageUrl: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
+      categoryId: 8, // Computer Repair category
+      price: 8.00 // From 8,000 RWF
+    },
+    {
+      serviceName: 'Mobile Device Help',
+      description: 'Smartphone and tablet repair, setup, and optimization',
+      duration: '30 min – 2 hours',
+      imageUrl: '/images/clint-bustrillos-K7OUs6y_cm8-unsplash.jpg',
+      categoryId: 8, // Computer Repair category
+      price: 5.00 // From 5,000 RWF
+    },
+    {
+      serviceName: 'Network & WiFi',
+      description: 'Internet setup, WiFi optimization, and network security',
+      duration: '1–3 hours',
+      imageUrl: '/images/samsung-memory-KTF38UTEKR4-unsplash.jpg',
+      categoryId: 7, // Internet/WiFi category
+      price: 10.00 // From 10,000 RWF
+    },
+    {
+      serviceName: 'Software Solutions',
+      description: 'Software installation, updates, and troubleshooting',
+      duration: '30 min – 2 hours',
+      imageUrl: '/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg',
+      categoryId: 8, // Computer Repair category
+      price: 6.00 // From 6,000 RWF
+    },
+    {
+      serviceName: 'Security & Backup',
+      description: 'Data protection, security setup, and backup solutions',
+      duration: '1–3 hours',
+      imageUrl: '/images/sammyayot254-vIQDv6tUHYk-unsplash.jpg',
+      categoryId: 9, // Cleaning
+      price: 12.00 // From 12,000 RWF
+    },
+    {
+      serviceName: 'Maintenance & Repair',
+      description: 'Regular maintenance and hardware repair services',
+      duration: '2–4 hours',
+      imageUrl: '/images/sxriptx-7Kehl5idKbU-unsplash.jpg',
+      categoryId: 8, // Computer Repair category
+      price: 15.00 // From 15,000 RWF
+    }
+  ];
 
   console.log('🌱 Seeding services...');
-  // services seeding code
+
+  for (const service of services) {
+    const createdService = await prisma.service.upsert({
+      where: {
+        id: services.indexOf(service) + 1 // Using index+1 as ID for simplicity
+      },
+      update: service,
+      create: service,
+    });
+
+    // Connect service to technician
+    await prisma.technicianDetails.update({
+      where: {userId: 101},
+      data: {
+        services: {
+          connect: {id: createdService.id}
+        }
+      }
+    });
+  }
+
   console.log('✅ Services seeded successfully!');
 
-  const locations = [];
+  const locations = [
+    {
+      customerId: 100, // Bruce SHIMWA (customer)
+      addressName: 'Work',
+      description: 'Down town building, Kigali, Rwanda',
+      googleMapUrl: 'https://maps.app.goo.gl/Q1uJDiG9E9RjaddHA',
+      latitude: -1.944876980860392,
+      longitude: 30.056057787565578,
+    },
+    {
+      customerId: 100, // Bruce SHIMWA (customer)
+      addressName: 'Office',
+      description: 'ALU Campus, Kigali Innovation City, Rwanda',
+      googleMapUrl: 'https://maps.google.com/?q=-1.9297,30.0919',
+      latitude: -1.9297,
+      longitude: 30.0919,
+    }
+  ];
 
   console.log('🌱 Seeding locations...');
-  // locations seeding code
+
+  for (const location of locations) {
+    await prisma.location.upsert({
+      where: {
+        id: locations.indexOf(location) + 1 // Using index+1 as ID for simplicity
+      },
+      update: location,
+      create: location,
+    });
+  }
+
   console.log('✅ Locations seeded successfully!');
 
-  const technicianAvailability = [];
+  const technicianAvailability = [
+    {
+      technicianId: 1, // The technician with userId 101
+      timeSlotId: 1, // 9:00 AM - 11:00 AM
+      date: new Date('2025-7-21'), // Using tomorrow's date
+      status: 'AVAILABLE'
+    },
+    {
+      technicianId: 1, // The technician with userId 101
+      timeSlotId: 2, // 11:00 AM - 1:00 PM
+      date: new Date('2025-7-21'), // Using tomorrow's date
+      status: 'AVAILABLE'
+    },
+    {
+      technicianId: 1, // The technician with userId 101
+      timeSlotId: 4, // 2:00 PM - 4:00 PM
+      date: new Date('2025-7-21'), // Using tomorrow's date
+      status: 'AVAILABLE'
+    },
+    {
+      technicianId: 1, // The technician with userId 101
+      timeSlotId: 5, // 4:00 PM - 6:00 PM
+      date: new Date('2025-7-22'), // Using day after tomorrow
+      status: 'AVAILABLE'
+    },
+    {
+      technicianId: 1, // The technician with userId 101
+      timeSlotId: 6, // 6:00 PM - 8:00 PM
+      date: new Date('2025-7-22'), // Using day after tomorrow
+      status: 'AVAILABLE'
+    }
+  ];
 
   console.log('🌱 Seeding technician availability...');
-  // technician availability seeding code
+
+  // Create the availability records
+  for (const availability of technicianAvailability) {
+    await prisma.technicianAvailability.upsert({
+      where: {
+        technicianId_date_timeSlotId: {
+          technicianId: availability.technicianId,
+          date: availability.date,
+          timeSlotId: availability.timeSlotId
+        }
+      },
+      update: availability,
+      create: availability,
+    });
+  }
+
   console.log('✅ Technician availabilities seeded successfully!');
 }
 
