@@ -88,7 +88,8 @@ const createBooking = async (req, res) => {
                 totalPrice: 1200,
                 customerId,
                 serviceId,
-                availabilityId
+                availabilityId,
+                customerNotes: description || null // Store description as customerNotes
             },
             include: {
                 customer: {
@@ -102,17 +103,83 @@ const createBooking = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        // fullName: true,
-                        // email: true,
-                        // phoneNumber: true
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
                     }
                 }
             }
         });
 
+        // Enhance the booking response with fields needed by the frontend
+        const enhancedBooking = {
+            ...booking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...booking.technician,
+                name: booking.technician.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: booking.technician.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: booking.technician.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: booking.technician.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: booking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: booking.availability?.date ? new Date(booking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: booking.availability?.timeSlot ? 
+                  `${new Date(booking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(booking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: booking.location ? 
+                     `${booking.location.description}, ${booking.location.district}, ${booking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${booking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: booking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: booking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        };
+
         return res.status(201).json({
             message: 'Booking created successfully',
-            booking
+            booking: enhancedBooking
         });
 
     } catch (error) {
@@ -185,9 +252,42 @@ const getBookings = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        fullName: true,
-                        email: true,
-                        phoneNumber: true
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
                     }
                 }
             },
@@ -202,12 +302,44 @@ const getBookings = async (req, res) => {
         if (search) {
             const searchTerm = search.toLowerCase();
             bookings = bookings.filter(booking =>
-                booking.title.toLowerCase().includes(searchTerm) ||
-                booking.description.toLowerCase().includes(searchTerm) ||
+                (booking.customerNotes && booking.customerNotes.toLowerCase().includes(searchTerm)) ||
                 booking.customer.fullName.toLowerCase().includes(searchTerm) ||
-                (booking.technician && booking.technician.fullName.toLowerCase().includes(searchTerm))
+                (booking.technician && booking.technician.user && booking.technician.user.fullName.toLowerCase().includes(searchTerm))
             );
         }
+
+        // Transform bookings to match frontend expectations
+        const enhancedBookings = bookings.map(booking => ({
+            ...booking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...booking.technician,
+                name: booking.technician.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: booking.technician.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: booking.technician.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: booking.technician.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: booking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: booking.availability?.date ? new Date(booking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: booking.availability?.timeSlot ? 
+                  `${new Date(booking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(booking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: booking.location ? 
+                     `${booking.location.description}, ${booking.location.district}, ${booking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${booking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: booking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: booking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        }));
 
         // Get total count
         const totalBookings = await prisma.booking.count({
@@ -219,7 +351,7 @@ const getBookings = async (req, res) => {
         return res.status(200).json({
             message: 'Bookings retrieved successfully',
             data: {
-                bookings,
+                bookings: enhancedBookings,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages,
@@ -260,9 +392,42 @@ const getBooking = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        fullName: true,
-                        email: true,
-                        phoneNumber: true
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
                     }
                 }
             }
@@ -287,9 +452,42 @@ const getBooking = async (req, res) => {
             });
         }
 
+        // Enhance the booking response with fields needed by the frontend
+        const enhancedBooking = {
+            ...booking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...booking.technician,
+                name: booking.technician.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: booking.technician.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: booking.technician.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: booking.technician.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: booking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: booking.availability?.date ? new Date(booking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: booking.availability?.timeSlot ? 
+                  `${new Date(booking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(booking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: booking.location ? 
+                     `${booking.location.description}, ${booking.location.district}, ${booking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${booking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: booking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: booking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        };
+
         return res.status(200).json({
             message: 'Booking retrieved successfully',
-            booking
+            booking: enhancedBooking
         });
 
     } catch (error) {
@@ -463,17 +661,83 @@ const updateBookingStatus = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        fullName: true,
-                        email: true,
-                        phoneNumber: true
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
                     }
                 }
             }
         });
 
+        // Enhance the booking response with fields needed by the frontend
+        const enhancedBooking = {
+            ...updatedBooking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...updatedBooking.technician,
+                name: updatedBooking.technician.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: updatedBooking.technician.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: updatedBooking.technician.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: updatedBooking.technician.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: updatedBooking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: updatedBooking.availability?.date ? new Date(updatedBooking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: updatedBooking.availability?.timeSlot ? 
+                  `${new Date(updatedBooking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(updatedBooking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: updatedBooking.location ? 
+                     `${updatedBooking.location.description}, ${updatedBooking.location.district}, ${updatedBooking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${updatedBooking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: updatedBooking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: updatedBooking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        };
+
         return res.status(200).json({
             message: 'Booking status updated successfully',
-            booking: updatedBooking
+            booking: enhancedBooking
         });
 
     } catch (error) {
@@ -537,17 +801,83 @@ const assignTechnician = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        fullName: true,
-                        email: true,
-                        phoneNumber: true
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
                     }
                 }
             }
         });
 
+        // Enhance the booking response with fields needed by the frontend
+        const enhancedBooking = {
+            ...updatedBooking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...updatedBooking.technician,
+                name: updatedBooking.technician.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: updatedBooking.technician.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: updatedBooking.technician.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: updatedBooking.technician.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: updatedBooking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: updatedBooking.availability?.date ? new Date(updatedBooking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: updatedBooking.availability?.timeSlot ? 
+                  `${new Date(updatedBooking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(updatedBooking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: updatedBooking.location ? 
+                     `${updatedBooking.location.description}, ${updatedBooking.location.district}, ${updatedBooking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${updatedBooking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: updatedBooking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: updatedBooking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        };
+
         return res.status(200).json({
             message: 'Technician assigned successfully',
-            booking: updatedBooking
+            booking: enhancedBooking
         });
 
     } catch (error) {
@@ -595,13 +925,98 @@ const deleteBooking = async (req, res) => {
             where: { id: parseInt(id) },
             data: {
                 status: 'CANCELLED',
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                cancelledAt: new Date()
+            },
+            include: {
+                customer: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        email: true,
+                        phoneNumber: true
+                    }
+                },
+                technician: {
+                    select: {
+                        id: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                                phoneNumber: true
+                            }
+                        },
+                        imageUrl: true,
+                        rate: true
+                    }
+                },
+                service: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        description: true,
+                        price: true
+                    }
+                },
+                location: {
+                    select: {
+                        id: true,
+                        description: true,
+                        district: true,
+                        province: true
+                    }
+                },
+                availability: {
+                    select: {
+                        id: true,
+                        date: true,
+                        timeSlot: {
+                            select: {
+                                startTime: true,
+                                endTime: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
+        // Enhance the booking response with fields needed by the frontend
+        const enhancedBooking = {
+            ...updatedBooking,
+            // Add fields needed by frontend but not available in the API response
+            technician: {
+                ...updatedBooking.technician,
+                name: updatedBooking.technician?.user?.fullName || 'Unknown Technician', // Use technician name from user relation
+                image: updatedBooking.technician?.imageUrl || '/default-technician.jpg', // Use technician image from imageUrl
+                rating: updatedBooking.technician?.rate || 0, // Use technician rate as rating
+                reviews: 0, // Dummy data - not available in API
+                phone: updatedBooking.technician?.user?.phoneNumber || 'Not available' // Use technician phone from user relation
+            },
+            // Convert service object to string for frontend
+            service: updatedBooking.service?.serviceName || 'Unknown Service',
+            // Extract date and time from scheduledDate or availability
+            date: updatedBooking.availability?.date ? new Date(updatedBooking.availability.date).toISOString().split('T')[0] : 'Not scheduled',
+            time: updatedBooking.availability?.timeSlot ? 
+                  `${new Date(updatedBooking.availability.timeSlot.startTime).toLocaleTimeString()} - ${new Date(updatedBooking.availability.timeSlot.endTime).toLocaleTimeString()}` : 
+                  'Not scheduled',
+            // Convert location object to string for frontend
+            location: updatedBooking.location ? 
+                     `${updatedBooking.location.description}, ${updatedBooking.location.district}, ${updatedBooking.location.province}` : 
+                     'No location specified',
+            // Format price for frontend
+            price: `${updatedBooking.totalPrice} RWF`,
+            // Convert status to frontend format
+            status: updatedBooking.status.toLowerCase(),
+            // Set booking date
+            bookingDate: updatedBooking.createdAt.toISOString(),
+            // Add devices array (dummy data - not available in API)
+            devices: ['Device information not available'] // Comment: devices field is missing in the API
+        };
+
         return res.status(200).json({
             message: 'Booking cancelled successfully',
-            booking: updatedBooking
+            booking: enhancedBooking
         });
 
     } catch (error) {
