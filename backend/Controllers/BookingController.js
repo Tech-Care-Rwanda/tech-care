@@ -12,7 +12,10 @@ const createBooking = async (req, res) => {
             scheduledAt,
             location,
             estimatedHours,
-            technicianId
+            technicianId,
+            serviceId,
+            locationId,
+            availabilityId
         } = req.body;
 
         // Validate required fields
@@ -31,7 +34,7 @@ const createBooking = async (req, res) => {
 
         if (!validCategories.includes(category)) {
             return res.status(400).json({
-                message: 'Invalid service category'
+                message: `Invalid service category. Try ${validCategories.join(', ').toLowerCase()}.`
             });
         }
 
@@ -39,12 +42,16 @@ const createBooking = async (req, res) => {
         if (technicianId) {
             const technician = await prisma.users.findFirst({
                 where: {
-                    id: technicianId,
                     role: 'TECHNICIAN',
-                    isActive: true
+                    isActive: true,
                 },
-                include: {
-                    technicianDetails: true
+                select: {
+                    id: true,
+                    technicianDetails: {
+                        where: {
+                            id: technicianId
+                        },
+                    }
                 }
             });
 
@@ -70,15 +77,18 @@ const createBooking = async (req, res) => {
         // Create the booking
         const booking = await prisma.booking.create({
             data: {
-                customerId,
                 technicianId,
-                title,
-                description,
-                category,
+                // description,
+                // category,
                 scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-                location,
+                locationId,
                 estimatedHours,
-                status: technicianId ? 'CONFIRMED' : 'PENDING'
+                // status: technicianId ? 'CONFIRMED' : 'PENDING',
+                duration: 120,
+                totalPrice: 1200,
+                customerId,
+                serviceId,
+                availabilityId
             },
             include: {
                 customer: {
@@ -92,9 +102,9 @@ const createBooking = async (req, res) => {
                 technician: {
                     select: {
                         id: true,
-                        fullName: true,
-                        email: true,
-                        phoneNumber: true
+                        // fullName: true,
+                        // email: true,
+                        // phoneNumber: true
                     }
                 }
             }

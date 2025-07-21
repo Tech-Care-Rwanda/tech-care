@@ -46,7 +46,7 @@ const getAvailableTechnicians = async (req, res) => {
                         experience: true,
                         isAvailable: true,
                         rate: true,
-                        imageUtl: true
+                        imageUrl: true
                     }
                 }
             },
@@ -135,7 +135,7 @@ const getTechnicianProfile = async (req, res) => {
                         age: true,
                         experience: true,
                         specialization: true,
-                        imageUtl: true,
+                        imageUrl: true,
                         certificateUrl: true,
                         isAvailable: true,
                         rate: true,

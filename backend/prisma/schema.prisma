@@ -245,11 +245,11 @@ model TechnicianAvailability {
 // Main Booking model
 model Booking {
   id             Int  @id @default(autoincrement())
-  customerId     Int
-  technicianId   Int
-  serviceId      Int
+  customerId     Int?
+  technicianId   Int?
+  serviceId      Int?
   locationId     Int? // Optional location for the service
-  availabilityId Int  @unique // Links to specific availability slot
+  availabilityId Int? @unique // Links to specific availability slot
 
   // Booking details
   scheduledDate DateTime? // When the service is scheduled
@@ -273,11 +273,11 @@ model Booking {
   cancellationReason String? // Reason for cancellation
 
   // Foreign key relationships
-  customer     Users                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  technician   TechnicianDetails      @relation(fields: [technicianId], references: [id], onDelete: Cascade)
-  service      Service                @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  location     Location?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  availability TechnicianAvailability @relation(fields: [availabilityId], references: [id])
+  customer     Users?                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  technician   TechnicianDetails?      @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  service      Service?                @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  location     Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  availability TechnicianAvailability? @relation(fields: [availabilityId], references: [id])
 
   review Review?
 

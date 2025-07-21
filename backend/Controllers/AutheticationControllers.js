@@ -245,10 +245,10 @@ const TechnicianSignUp = async (req, res) => {
                     userId: user.id,
                     gender: gender.trim(),
                     age: parseInt(ageValue) || parseInt(age) || 0,
-                    DateOfBirth: new Date(dateOfBirth.trim()),
+                    dateOfBirth: new Date(dateOfBirth.trim()),
                     experience: experience.trim(),
                     specialization: specialization.trim(),
-                    imageUtl: imageUploadResult.publicUrl,
+                    imageUrl: imageUploadResult.publicUrl,
                     certificateUrl: certificateUploadResult.publicUrl,
                     isAvailable: true,
                     rate: 0

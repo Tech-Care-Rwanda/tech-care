@@ -199,7 +199,7 @@ const getAllTechnicians = async (req, res) => {
             dateOfBirth: true,  // Note: Capital D and B as shown in error
             experience: true,
             specialization: true,
-            imageUtl: true,     // Note: imageUtl not imageUrl
+            imageUrl: true,
             certificateUrl: true,
             isAvailable: true,
             rate: true,
@@ -274,9 +274,9 @@ const getAllTechnicians = async (req, res) => {
         approvalStatus: tech.technicianDetails.approvalStatus,
         isAvailable: tech.technicianDetails.isAvailable,
         rate: tech.technicianDetails.rate,
-        hasProfileImage: !!tech.technicianDetails.imageUtl, // Using correct field name
+        hasProfileImage: !!tech.technicianDetails.imageUrl, // Using correct field name
         hasCertificate: !!tech.technicianDetails.certificateUrl,
-        profileImageUrl: tech.technicianDetails.imageUtl,
+        profileImageUrl: tech.technicianDetails.imageUrl,
         certificateUrl: tech.technicianDetails.certificateUrl,
         profileCompletedAt: tech.technicianDetails.createdAt
       } : null
@@ -510,7 +510,7 @@ const RejectTechnician = async (req, res) => {
             approvalStatus: true,
             specialization: true,
             experience: true,
-            imageUtl: true,
+            imageUrl: true,
             certificateUrl: true
           }
         }
@@ -673,7 +673,7 @@ const getTechnicianDetails = async (req, res) => {
             dateOfBirth: true,
             experience: true,
             specialization: true,
-            imageUtl: true,
+            imageUrl: true,
             certificateUrl: true,
             isAvailable: true,
             rate: true,
