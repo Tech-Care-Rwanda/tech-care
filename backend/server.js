@@ -60,7 +60,7 @@ app.use('/api/v1/auth', AutheticationRoutes);
 app.use('/api/v1/customer',  CustomerRoutes);
 app.use('/api/v1/admin', AdminRoutes);
 app.use('/api/v1/categories', CategoryRoutes);
-app.use('api/v1/services', ServicesRoutes);
+app.use('/api/v1/services', ServicesRoutes);
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/technicians', TechnicianRoutes);
 

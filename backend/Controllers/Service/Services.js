@@ -92,7 +92,7 @@ const addService = async (req, res) => {
 const updateService = async (req, res) => {
     try {
          const {id} = req.params;
-         const { serviceName, description, categoryId, price, timeEstimate, isActive} = req.body;
+         const { serviceName, description, categoryId, price, timeEstimate} = req.body;
 
         const userId = req.user.id;
 
@@ -148,8 +148,7 @@ const updateService = async (req, res) => {
             ...(description && {description}),
             ...(categoryId && {categoryId: parseInt(categoryId)}),
             ...(price && {price: parseFloat(price)}),
-            ...(timeEstimate && {timeEstimate: parseInt(timeEstimate)}),
-            ...(isActive !== undefined && {isActive: Boolean(isActive)})
+            ...(timeEstimate && {timeEstimate: parseInt(timeEstimate)})
         },
 
         include: {
@@ -244,7 +243,7 @@ const getTechnicianServices = async (req, res) => {
     try {
          
         const userId = req.user.id;
-        const {page = 1, limit = 10, isActive} = req.query;
+        const {page = 1, limit = 10} = req.query;
 
         // Get technician details
         const technicianDetails = await prisma.technicianDetails.findUnique({
@@ -269,10 +268,6 @@ const getTechnicianServices = async (req, res) => {
                     id: technicianDetails.id
                 }
             }
-        }
-
-        if (isActive !== undefined) {
-            whereClause.isActive = isActive === 'true';
         }
 
         const [service, totalCount] = await Promise.all([
@@ -326,11 +321,7 @@ const getTechnicianServices = async (req, res) => {
 // Get all services (Public - for customers to view)
 const getAllServices = async (req, res) => {
   try {
-    const { page = 1, limit = 10, categoryId, search, isActive = 'true' } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const whereClause = {
-      isActive: isActive === 'true',
       technicians: {
         some: {
           approvalStatus: 'APPROVED',
@@ -339,20 +330,8 @@ const getAllServices = async (req, res) => {
       }
     };
 
-    if (categoryId) {
-      whereClause.categoryId = parseInt(categoryId);
-    }
-
-    if (search) {
-      whereClause.OR = [
-        { serviceName: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-
     const [services, totalCount] = await Promise.all([
       prisma.service.findMany({
-        where: whereClause,
         include: {
           category: true,
           technicians: {
@@ -367,23 +346,15 @@ const getAllServices = async (req, res) => {
             }
           }
         },
-        skip,
-        take: parseInt(limit),
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.service.count({ where: whereClause })
+      prisma.service.count()
     ]);
 
     res.status(200).json({
       success: true,
       data: {
         services,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(totalCount / parseInt(limit)),
-          totalItems: totalCount,
-          itemsPerPage: parseInt(limit)
-        }
       }
     });
 
@@ -405,7 +376,6 @@ const getServiceById = async (req, res) => {
     const service = await prisma.service.findUnique({
       where: { 
         id: parseInt(id),
-        isActive: true
       },
       include: {
         category: true,
@@ -454,7 +424,6 @@ const getServicesByCategory = async (req, res) => {
 
     const whereClause = {
       categoryId: parseInt(categoryId),
-      isActive: true,
       technicians: {
         some: {
           approvalStatus: 'APPROVED',
