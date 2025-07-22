@@ -86,9 +86,9 @@ const getAllLocations = async (req, res) => {
     try {
         const customerId = req.user.id; // Assuming the user is authenticated and has an ID
 
-        if (req.user.role !== 'CUSTOMER'){
-            return res.status(403).json({ error: 'Only customers can view their locations'});
-        }
+        // if (req.user.role !== 'CUSTOMER'){
+        //     return res.status(403).json({ error: 'Only customers can view their locations'});
+        // }
 
         const locations  = await prisma.location.findMany( {
             where: {
