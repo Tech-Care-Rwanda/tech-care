@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, MapPin, Clock, Phone, Navigation } from 'lucide-react'
-import { technicianService } from '@/lib/services/technicianService'
+import { supabaseService, TechnicianDetails } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface TechnicianWithDistance {
@@ -27,10 +27,12 @@ interface TechnicianWithDistance {
 
 interface TechnicianMapProps {
   className?: string
+  filterSpecialization?: string[]
 }
 
 export const TechnicianMap: React.FC<TechnicianMapProps> = ({
-  className = "h-[600px]"
+  className = "h-[600px]",
+  filterSpecialization
 }) => {
   const router = useRouter()
   const { position: userLocation, getCurrentPosition, loading: locationLoading } = useGeolocation()
@@ -40,59 +42,107 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch nearby technicians from API
+  // Initialize marker icons once when component mounts
+  const [markerIcons, setMarkerIcons] = useState<ReturnType<typeof getMarkerIcons>>({
+    technician: undefined,
+    user: undefined,
+    service: undefined
+  })
+  const [iconsInitialized, setIconsInitialized] = useState(false)
+
+  // Initialize icons only once when Google Maps is available
+  useEffect(() => {
+    if (iconsInitialized) return
+
+    const initializeIcons = () => {
+      if (typeof google !== 'undefined' && google.maps) {
+        const icons = getMarkerIcons()
+        if (icons.technician) {
+          setMarkerIcons(icons)
+          setIconsInitialized(true)
+        }
+      }
+    }
+
+    if (typeof google !== 'undefined' && google.maps) {
+      initializeIcons()
+    } else {
+      const checkInterval = setInterval(() => {
+        if (typeof google !== 'undefined' && google.maps) {
+          initializeIcons()
+          clearInterval(checkInterval)
+        }
+      }, 500) // Check every 500ms instead of 100ms
+
+      return () => clearInterval(checkInterval)
+    }
+  }, [iconsInitialized]) // Dependency on iconsInitialized to prevent re-running
+
+  // Fetch nearby technicians from Supabase
   const fetchNearbyTechnicians = useCallback(async (lat: number, lng: number) => {
     setLoading(true)
     setError(null)
-    
+
     try {
-      const response = await technicianService.getAllTechnicians()
+      const techniciansData = await supabaseService.getTechnicians(true) // Get available technicians
+
+      console.log('Raw technician data from Supabase:', techniciansData) // Debug log
+
+      // Transform Supabase data to map format
+      let filteredData = techniciansData.filter(tech => tech.is_available)
       
-      if (response.success && response.data) {
-        // Transform API data to map format with mock locations for now
-        const transformedTechnicians: TechnicianWithDistance[] = response.data
-          .filter(tech => tech.available)
-          .map((tech, index) => {
-            // Mock Kigali coordinates for demo
-            const kigaliCoords = [
-              { lat: -1.9470, lng: 30.0588 },
-              { lat: -1.9390, lng: 30.0740 },
-              { lat: -1.9530, lng: 30.0910 },
-              { lat: -1.9350, lng: 30.0450 },
-              { lat: -1.9580, lng: 30.0820 }
-            ]
-            const location = kigaliCoords[index % kigaliCoords.length]
-            const distance = Math.sqrt(
-              Math.pow(location.lat - lat, 2) + Math.pow(location.lng - lng, 2)
-            ) * 111 // Rough km conversion
-            
-            return {
-              id: tech.id,
-              name: tech.name,
-              avatar: tech.avatar,
-              rating: tech.rating,
-              specialization: tech.specialties[0] || 'General Tech',
-              location,
-              distance: Math.round(distance * 10) / 10,
-              estimatedArrival: `${Math.ceil(distance / 0.5)} min`,
-              isAvailable: tech.available,
-              phoneNumber: '+250788123456', // Mock phone
-              rate: tech.hourlyRate
-            }
-          })
-        
-        setTechnicians(transformedTechnicians)
-        
-        // If no technicians found, show message
-        if (transformedTechnicians.length === 0) {
-          setError('No available technicians found in your area.')
-        }
-      } else {
-        setError('Failed to load technicians from API.')
+      // Apply specialization filter if provided
+      if (filterSpecialization && filterSpecialization.length > 0) {
+        filteredData = filteredData.filter(tech => 
+          filterSpecialization.some(spec => 
+            tech.specialization.toLowerCase().includes(spec.toLowerCase()) ||
+            spec.toLowerCase().includes(tech.specialization.toLowerCase())
+          )
+        )
+      }
+      
+      const transformedTechnicians: TechnicianWithDistance[] = filteredData
+        .map((tech) => {
+          // Only use technicians with valid coordinates - NO MOCK DATA
+          if (!tech.latitude || !tech.longitude) {
+            return null
+          }
+          
+          const location = { lat: tech.latitude, lng: tech.longitude }
+
+          const distance = Math.sqrt(
+            Math.pow(location.lat - lat, 2) + Math.pow(location.lng - lng, 2)
+          ) * 111 // Rough km conversion
+
+          // Debug the user data
+          console.log('Technician:', tech.id, 'User data:', tech.user)
+
+          return {
+            id: tech.id.toString(),
+            name: tech.user?.full_name || tech.specialization || 'Technician',
+            avatar: tech.image_url,
+            rating: tech.rate / 10, // Convert rate to 5-star scale
+            specialization: tech.specialization,
+            location,
+            distance: Math.round(distance * 10) / 10,
+            estimatedArrival: `${Math.ceil(distance / 0.5)} min`,
+            isAvailable: tech.is_available,
+            phoneNumber: tech.user?.phone_number,
+            rate: tech.rate
+          }
+        })
+        .filter(Boolean) as TechnicianWithDistance[] // Remove null entries
+
+      console.log('Transformed technicians:', transformedTechnicians) // Debug log
+      setTechnicians(transformedTechnicians)
+
+      // If no technicians found, show message
+      if (transformedTechnicians.length === 0) {
+        setError('No available technicians found in your area.')
       }
     } catch (err) {
-      console.error('Error fetching technicians:', err)
-      setError('Failed to connect to backend API.')
+      console.error('Error fetching technicians from Supabase:', err)
+      setError('Failed to load technicians from database.')
       setTechnicians([])
     } finally {
       setLoading(false)
@@ -107,7 +157,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
       // Load all technicians with default location when no user location
       fetchNearbyTechnicians(-1.9441, 30.0619) // Default to Kigali center
     }
-  }, [userLocation, fetchNearbyTechnicians])
+  }, [userLocation, fetchNearbyTechnicians, filterSpecialization])
 
   // Update map center when user location is available
   useEffect(() => {
@@ -124,39 +174,9 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
 
   const getDistanceColor = (distance: number) => {
     if (distance <= 2) return "text-green-600 bg-green-50"
-    if (distance <= 5) return "text-yellow-600 bg-yellow-50" 
+    if (distance <= 5) return "text-yellow-600 bg-yellow-50"
     return "text-red-600 bg-red-50"
   }
-
-  const [markerIcons, setMarkerIcons] = useState<ReturnType<typeof getMarkerIcons>>({
-    technician: undefined,
-    user: undefined,
-    service: undefined
-  })
-
-  // Initialize marker icons when Google Maps is loaded
-  useEffect(() => {
-    const initializeIcons = () => {
-      if (typeof google !== 'undefined' && google.maps) {
-        setMarkerIcons(getMarkerIcons())
-      }
-    }
-
-    // Check if Google Maps is already loaded
-    if (typeof google !== 'undefined' && google.maps) {
-      initializeIcons()
-    } else {
-      // Wait for Google Maps to load
-      const interval = setInterval(() => {
-        if (typeof google !== 'undefined' && google.maps) {
-          initializeIcons()
-          clearInterval(interval)
-        }
-      }, 100)
-
-      return () => clearInterval(interval)
-    }
-  }, [])
 
   return (
     <Card className={`overflow-hidden ${className}`}>
@@ -212,20 +232,21 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
         <div className="absolute top-4 left-4 space-y-2">
           <Card className="p-3 shadow-lg">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF385C' }}></div>
               <span className="text-sm font-medium">Available Technicians ({technicians.length})</span>
             </div>
             <div className="flex items-center space-x-2 mt-1">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
               <span className="text-sm">Your Location</span>
             </div>
           </Card>
 
           {!userLocation && !locationLoading && (
-            <Button 
+            <Button
               onClick={getCurrentPosition}
-              size="sm" 
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              size="sm"
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: '#FF385C' }}
             >
               <Navigation className="w-4 h-4 mr-2" />
               Find My Location
@@ -243,7 +264,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                   {selectedTechnician.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -256,22 +277,22 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                     ✕
                   </button>
                 </div>
-                
+
                 <p className="text-sm text-gray-600 mb-2">{selectedTechnician.specialization}</p>
-                
+
                 <div className="flex items-center space-x-4 text-sm mb-3">
                   <div className="flex items-center">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
                     <span className="font-medium">{selectedTechnician.rating}</span>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <MapPin className="w-4 h-4 text-gray-400 mr-1" />
                     <Badge className={`text-xs ${getDistanceColor(selectedTechnician.distance)}`}>
                       {selectedTechnician.distance}km away
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 text-gray-400 mr-1" />
                     <span className="text-gray-600">{selectedTechnician.estimatedArrival}</span>
@@ -279,19 +300,21 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={() => router.push(`/dashboard/book/${selectedTechnician.id}`)}
-                    className="flex-1"
+                    className="flex-1 text-white hover:opacity-90"
+                    style={{ backgroundColor: '#FF385C' }}
                   >
                     Book Now
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
+
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => window.open(`tel:+250791995143`)}
                     title="Call technician"
+                    className="border-gray-300 hover:bg-gray-50"
                   >
                     <Phone className="w-4 h-4" />
                   </Button>
@@ -306,7 +329,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
           <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
             <Card className="p-4">
               <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderBottomColor: '#FF385C' }}></div>
                 <span className="text-sm">
                   {locationLoading ? 'Getting your location...' : 'Finding nearby technicians...'}
                 </span>

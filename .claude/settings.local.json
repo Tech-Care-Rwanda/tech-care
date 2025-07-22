@@ -9,7 +9,14 @@
       "Bash(node:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(npm run:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(timeout 15 npm run dev)",
+      "Bash(timeout 10 npm start)",
+      "Bash(start /B node:*)"
     ],
     "deny": []
   }

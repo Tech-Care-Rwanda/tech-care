@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { PrismaClient } = require('./generated/prisma');
+const { createClient } = require('@supabase/supabase-js');
+const supabaseService = require('./services/supabaseService');
 const AutheticationRoutes = require('./routes/AutheticationRoutes');
 const CustomerRoutes = require('./routes/CustomerRoutes')
 const AdminRoutes = require('./routes/AdminRoutes')
@@ -16,7 +17,15 @@ const path = require('path');
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// Make supabase available to all routes
+app.locals.supabase = supabase;
 
 // Middleware
 app.use(cors());
@@ -69,10 +78,27 @@ app.use('/api/v1/technicians', NearbyTechniciansRoutes);
 // Health check route
 app.get('/health', async (req, res) => {
   try {
-    await prisma.$connect();
-    res.json({ status: 'OK', database: 'Connected' });
+    const dbStatus = await supabaseService.testConnection();
+    
+    if (dbStatus.connected) {
+      res.json({ 
+        status: 'OK', 
+        database: 'Supabase Connected',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({ 
+        status: 'Error', 
+        database: 'Supabase Disconnected', 
+        error: dbStatus.error 
+      });
+    }
   } catch (error) {
-    res.status(500).json({ status: 'Error', database: 'Disconnected', error: error.message });
+    res.status(500).json({ 
+      status: 'Error', 
+      database: 'Connection Failed', 
+      error: error.message 
+    });
   }
 });
 
@@ -91,7 +117,7 @@ const PORT = process.env.PORT || 3000;
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  await prisma.$disconnect();
+  console.log('Server shutting down...');
   process.exit(0);
 });
 
@@ -99,9 +125,13 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// database  connection 
-prisma.$connect().then(() => {
-  console.log('Database connected successfully');
+// Test Supabase connection
+supabaseService.testConnection().then(result => {
+  if (result.connected) {
+    console.log('Supabase connected successfully');
+  } else {
+    console.error('Supabase connection failed:', result.error);
+  }
 }).catch(error => {
-  console.error('Database connection failed:', error);
+  console.error('Supabase connection test failed:', error);
 })

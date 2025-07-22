@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { supabaseService } from '@/lib/supabase'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +22,10 @@ import Link from 'next/link'
 
 const EMERGENCY_NUMBER = "+250791995143"
 
-interface Booking {
+// Use the database interfaces from supabase.ts
+import type { Booking as DatabaseBooking, User, TechnicianDetails } from '@/lib/supabase'
+
+interface DisplayBooking {
   id: string
   technician: {
     id: string
@@ -46,16 +50,17 @@ const STATUS_CONFIG = {
 }
 
 export default function DashboardPage() {
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<DisplayBooking[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock user data
-  const user = {
+  // User data - will be replaced with auth context later
+  const [user, setUser] = useState({
     name: "John Uwimana",
     avatar: "/images/default-avatar.jpg",
-    totalBookings: 8,
+    totalBookings: 0,
     memberSince: "2024-01"
-  }
+  })
 
   const handleCall = (phoneNumber?: string) => {
     window.open(`tel:${phoneNumber || EMERGENCY_NUMBER}`)
@@ -65,42 +70,46 @@ export default function DashboardPage() {
     window.open(`sms:${phoneNumber || EMERGENCY_NUMBER}?body=Hi, I need technical support...`)
   }
 
-  // Load bookings - using mock data for now
+  // Load real bookings from database
   useEffect(() => {
-    const mockBookings: Booking[] = [
-      {
-        id: '1',
-        technician: {
-          id: '1',
-          name: 'Marie Uwimana',
-          avatar: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
-          rating: 4.8,
-          specialization: 'Computer Repair'
-        },
-        serviceType: 'Computer Repair',
-        status: 'confirmed',
-        urgency: 'urgent',
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        scheduledDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '2',
-        technician: {
-          id: '2',
-          name: 'Jean Baptiste',
-          avatar: '/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg',
-          rating: 4.6,
-          specialization: 'Mobile Device'
-        },
-        serviceType: 'Mobile Repair',
-        status: 'completed',
-        urgency: 'standard',
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const loadBookings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // For now, assume customer ID = 1 (will be replaced with auth)
+        const customerId = 1
+        const databaseBookings = await supabaseService.getBookingsByCustomer(customerId)
+        
+        // Transform database bookings to display format
+        const displayBookings: DisplayBooking[] = databaseBookings.map(booking => ({
+          id: booking.id.toString(),
+          technician: {
+            id: booking.technician?.id?.toString() || 'unknown',
+            name: booking.technician?.user?.fullName || booking.technician?.specialization || 'Unknown Technician',
+            avatar: booking.technician?.imageUrl,
+            rating: booking.technician?.rate ? booking.technician.rate / 10 : 0,
+            specialization: booking.technician?.specialization || 'General'
+          },
+          serviceType: booking.service?.serviceName || 'Service',
+          status: booking.status.toLowerCase() as any,
+          createdAt: booking.createdAt,
+          scheduledDate: booking.scheduledDate || undefined,
+          urgency: 'standard' // Default to standard, urgency logic would need to be added to database
+        }))
+        
+        setBookings(displayBookings)
+        setUser(prev => ({ ...prev, totalBookings: displayBookings.length }))
+      } catch (err) {
+        console.error('Error loading bookings:', err)
+        setError('Failed to load bookings')
+        setBookings([]) // Show empty state instead of mock data
+      } finally {
+        setLoading(false)
       }
-    ]
-    
-    setBookings(mockBookings)
-    setLoading(false)
+    }
+
+    loadBookings()
   }, [])
 
   const formatDate = (dateString: string) => {
@@ -126,7 +135,7 @@ export default function DashboardPage() {
             <p className="text-gray-600 mt-1">Manage your service appointments and history</p>
           </div>
           <div className="mt-4 sm:mt-0">
-            <Button asChild>
+            <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
               <Link href="/">
                 <Plus className="w-4 h-4 mr-2" />
                 Book New Service
@@ -146,12 +155,30 @@ export default function DashboardPage() {
               <Badge variant="secondary">{activeBookings.length}</Badge>
             </div>
             
-            {activeBookings.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderBottomColor: '#FF385C' }}></div>
+                <p className="text-gray-600">Loading your bookings...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading bookings</h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="text-white hover:opacity-90" 
+                  style={{ backgroundColor: '#FF385C' }}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : activeBookings.length === 0 ? (
               <div className="text-center py-8">
                 <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No active bookings</h3>
                 <p className="text-gray-600 mb-4">Ready to get tech support? Find a technician near you.</p>
-                <Button asChild>
+                <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
                   <Link href="/">Find Technicians</Link>
                 </Button>
               </div>
@@ -280,9 +307,9 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 mb-1">{user.name}</h3>
               <p className="text-sm text-gray-600 mb-4">Member since {user.memberSince}</p>
               
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{user.totalBookings}</p>
-                <p className="text-sm text-blue-800">Total Services</p>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF2F2' }}>
+                <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>{user.totalBookings}</p>
+                <p className="text-sm" style={{ color: '#B91C1C' }}>Total Services</p>
               </div>
             </div>
           </Card>
@@ -291,15 +318,17 @@ export default function DashboardPage() {
           <Card className="p-4">
             <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" asChild>
+              <Button variant="outline" className="w-full justify-start hover:bg-red-50" style={{ borderColor: '#FF385C', color: '#FF385C' }} asChild>
                 <Link href="/">
                   <MapPin className="w-4 h-4 mr-2" />
                   Find Technicians
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <User className="w-4 h-4 mr-2" />
-                Edit Profile
+              <Button variant="outline" className="w-full justify-start hover:bg-red-50" style={{ borderColor: '#FF385C', color: '#FF385C' }} asChild>
+                <Link href="/profile">
+                  <User className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Link>
               </Button>
             </div>
           </Card>
@@ -311,9 +340,9 @@ export default function DashboardPage() {
               Need immediate help? Call our 24/7 support line.
             </p>
             <Button 
-              variant="destructive" 
               size="sm" 
-              className="w-full"
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: '#FF385C' }}
               onClick={() => handleCall(EMERGENCY_NUMBER)}
             >
               <Phone className="w-4 h-4 mr-2" />
