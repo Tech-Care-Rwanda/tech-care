@@ -287,15 +287,14 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                     Book Now
                   </Button>
                   
-                  {selectedTechnician.phoneNumber && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(`tel:${selectedTechnician.phoneNumber}`)}
-                    >
-                      <Phone className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open(`tel:+250791995143`)}
+                    title="Call technician"
+                  >
+                    <Phone className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>

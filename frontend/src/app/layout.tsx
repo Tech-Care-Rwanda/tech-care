@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SearchProvider } from "@/lib/contexts/SearchContext";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { NavigationBar } from "@/components/layout/NavigationBar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,12 +24,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans antialiased`}
+        className={`${inter.variable} font-sans antialiased bg-gray-50`}
         suppressHydrationWarning={true} // Prevents hydration warnings from browser extensions like Grammarly
       >
         <AuthProvider>
           <SearchProvider>
-            {children}
+            <div className="min-h-screen flex flex-col">
+              {/* Fixed Navigation */}
+              <NavigationBar />
+              
+              {/* Main Content Area */}
+              <main className="flex-1 pt-16">
+                {children}
+              </main>
+            </div>
           </SearchProvider>
         </AuthProvider>
       </body>
