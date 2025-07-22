@@ -107,11 +107,16 @@ model PasswordResetToken {
 model Location {
   id            Int      @id @default(autoincrement())
   customerId    Int
-  addressName   String?  // e.g., "Home", "Office", "Apartment"
+  addressName   String  // e.g., "Home", "Office", "Apartment"
   description   String   // Detailed address description
   district      String
   province      String
-  googleMapUrl  String?  // Optional Google Maps location URL
+  googleMapUrl  String  
+
+  // Geographical coordinates 
+  latitude      Decimal @db.Decimal(9, 6) // e.g., 12.345678
+  longitude     Decimal @db.Decimal(9, 6) // e.g., 12.345678
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -249,7 +254,7 @@ model Booking {
   customerId        Int
   technicianId      Int
   serviceId         Int
-  locationId        Int?        // Optional location for the service
+  locationId        Int        // Required location for the service
   availabilityId    Int       @unique // Links to specific availability slot
   
   // Booking details
@@ -277,7 +282,7 @@ model Booking {
   customer     Users @relation(fields: [customerId], references: [id], onDelete: Cascade)
   technician   TechnicianDetails @relation(fields: [technicianId], references: [id], onDelete: Cascade)
   service      Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  location     Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
   availability TechnicianAvailability @relation(fields: [availabilityId], references: [id])
   
   

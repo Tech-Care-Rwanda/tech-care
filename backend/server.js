@@ -7,6 +7,7 @@ const CustomerRoutes = require('./routes/CustomerRoutes')
 const AdminRoutes = require('./routes/AdminRoutes')
 const CategoryRoutes = require('./routes/Category/CategoryRoutes');
 const ServicesRoutes = require('./routes/Services/ServicesRoutes');
+const locationRoutes = require('./routes/Location/LocationRoutes')
 const path = require('path');
 
 // Load environment variables
@@ -58,7 +59,8 @@ app.use('/api/v1/auth', AutheticationRoutes);
 app.use('/api/v1/customer',  CustomerRoutes);
 app.use('/api/v1/admin', AdminRoutes);
 app.use('/api/v1/categories', CategoryRoutes);
-app.use('api/v1/services', ServicesRoutes);
+app.use('/api/v1/services', ServicesRoutes);
+app.use('/api/v1/location', locationRoutes);
 
 // Health check route
 app.get('/health', async (req, res) => {
