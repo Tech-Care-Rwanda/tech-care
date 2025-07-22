@@ -7,7 +7,13 @@ import {
   Calendar,
   User,
   Search,
-  Menu
+  Menu,
+  FileText,
+  Users,
+  DollarSign,
+  Wrench,
+  TrendingUp,
+  Shield
 } from "lucide-react"
 import { cn, UserRole } from "@/lib/utils"
 import { Button } from "@/components/ui/button"

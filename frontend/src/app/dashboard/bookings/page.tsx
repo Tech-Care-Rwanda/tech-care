@@ -1,318 +1,375 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import {
+import { useState, useEffect } from 'react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { 
+  Clock, 
+  MapPin, 
+  Star, 
+  Phone, 
+  MessageCircle, 
   Calendar,
-  MapPin,
-  Clock,
-  Star,
-  Phone,
-  MessageSquare,
-  MoreHorizontal,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader2
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { useBookings, useBookingOperations } from "@/lib/hooks/useBookings"
-import { Booking } from "@/lib/services/bookingService"
+  ArrowLeft,
+  Filter,
+  Search
+} from 'lucide-react'
+import Link from 'next/link'
+import { bookingService } from '@/lib/services/bookingService'
+
+interface Booking {
+  id: string
+  technician: {
+    id: string
+    name: string
+    avatar?: string
+    rating: number
+    specialization: string
+    phone?: string
+  }
+  serviceType: string
+  description: string
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  urgency: 'low' | 'medium' | 'high'
+  createdAt: string
+  scheduledDate?: string
+  completedAt?: string
+  estimatedCost?: number
+  actualCost?: number
+}
+
+const STATUS_CONFIG = {
+  pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+  confirmed: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800' },
+  in_progress: { label: 'In Progress', color: 'bg-purple-100 text-purple-800' },
+  completed: { label: 'Completed', color: 'bg-green-100 text-green-800' },
+  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800' }
+}
+
+const URGENCY_CONFIG = {
+  low: { color: 'bg-green-100 text-green-800' },
+  medium: { color: 'bg-yellow-100 text-yellow-800' },
+  high: { color: 'bg-red-100 text-red-800' }
+}
 
 export default function BookingsPage() {
-  const [activeTab, setActiveTab] = useState("all")
-  const { bookings, loading, error, refetch } = useBookings()
-  const { updateStatus, cancelBooking, loading: operationLoading } = useBookingOperations()
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed'>('all')
 
-  // Filter bookings based on active tab
-  const filteredBookings = bookings.filter(booking => {
-    if (activeTab === "all") return true
-    return booking.status === activeTab
-  })
-
-  const getStatusColor = (status: Booking['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'in_progress':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+  // Load bookings
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const response = await bookingService.getUserBookings('1') // TODO: Get from auth context
+        if (response.success && response.data) {
+          // Transform API data to component format
+          const transformedBookings: Booking[] = response.data.map((booking: any) => ({
+            id: booking.id.toString(),
+            technician: {
+              id: booking.technician?.id?.toString() || '1',
+              name: booking.technician?.name || 'Unknown Technician',
+              avatar: booking.technician?.avatar,
+              rating: booking.technician?.rating || 4.5,
+              specialization: booking.serviceType || 'General Tech',
+              phone: '+250788123456' // Mock phone
+            },
+            serviceType: booking.serviceType,
+            description: booking.description,
+            status: booking.status,
+            urgency: booking.urgency || 'medium',
+            createdAt: booking.createdAt,
+            scheduledDate: booking.scheduledDate,
+            completedAt: booking.completedAt,
+            estimatedCost: booking.estimatedCost,
+            actualCost: booking.actualCost
+          }))
+          setBookings(transformedBookings)
+        } else {
+          // Mock data for demonstration
+          setBookings([
+            {
+              id: '1',
+              technician: {
+                id: '1',
+                name: 'Marie Uwimana',
+                avatar: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
+                rating: 4.8,
+                specialization: 'Computer Repair',
+                phone: '+250788123456'
+              },
+              serviceType: 'Computer Repair',
+              description: 'Laptop won\'t boot up, blue screen error',
+              status: 'confirmed',
+              urgency: 'high',
+              createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+              scheduledDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // in 4 hours
+              estimatedCost: 15000
+            },
+            {
+              id: '2',
+              technician: {
+                id: '2',
+                name: 'Jean Baptiste',
+                avatar: '/images/md-riduwan-molla-ZO0weaaDrBs-unsplash.jpg',
+                rating: 4.6,
+                specialization: 'Mobile Device',
+                phone: '+250788234567'
+              },
+              serviceType: 'Mobile Repair',
+              description: 'Phone screen cracked, touchscreen not responsive',
+              status: 'completed',
+              urgency: 'medium',
+              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+              completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+              actualCost: 25000
+            },
+            {
+              id: '3',
+              technician: {
+                id: '3',
+                name: 'David Nkusi',
+                avatar: '/images/samsung-memory-KTF38UTEKR4-unsplash.jpg',
+                rating: 4.9,
+                specialization: 'Network Setup',
+                phone: '+250788345678'
+              },
+              serviceType: 'Network Setup',
+              description: 'Setup WiFi network for office, 20 devices',
+              status: 'pending',
+              urgency: 'low',
+              createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+              estimatedCost: 50000
+            }
+          ])
+        }
+      } catch (error) {
+        console.error('Failed to load bookings:', error)
+      } finally {
+        setLoading(false)
+      }
     }
+    
+    loadBookings()
+  }, [])
+
+  const filteredBookings = bookings.filter(booking => 
+    filter === 'all' || booking.status === filter
+  )
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
-  const getStatusIcon = (status: Booking['status']) => {
-    switch (status) {
-      case 'confirmed':
-        return <CheckCircle className="h-4 w-4" />
-      case 'completed':
-        return <CheckCircle className="h-4 w-4" />
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />
-      case 'pending':
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
-    }
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 1) return 'Just now'
+    if (diffInHours === 1) return '1 hour ago'
+    if (diffInHours < 24) return `${diffInHours} hours ago`
+    const diffInDays = Math.floor(diffInHours / 24)
+    return diffInDays === 1 ? '1 day ago' : `${diffInDays} days ago`
   }
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: Booking['status']) => {
-    const success = await updateStatus(bookingId, newStatus)
-    if (success) {
-      refetch() // Refresh the bookings list
-    }
-  }
-
-  const handleCancelBooking = async (bookingId: string) => {
-    const success = await cancelBooking(bookingId)
-    if (success) {
-      refetch() // Refresh the bookings list
-    }
-  }
-
-  const getTabCount = (status: string) => {
-    if (status === "all") return bookings.length
-    return bookings.filter(booking => booking.status === status).length
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your bookings...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Manage your service appointments and bookings
-            </p>
-          </div>
-        </div>
-
-        {/* Status Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            {[
-              { id: "all", label: "All Bookings", count: getTabCount("all") },
-              { id: "pending", label: "Pending", count: getTabCount("pending") },
-              { id: "confirmed", label: "Confirmed", count: getTabCount("confirmed") },
-              { id: "completed", label: "Completed", count: getTabCount("completed") },
-              { id: "cancelled", label: "Cancelled", count: getTabCount("cancelled") }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === tab.id
-                    ? "border-red-500 text-red-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-              >
-                {tab.label}
-                <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded-full ${activeTab === tab.id ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600"
-                  }`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            <p>Error loading bookings: {error}</p>
-            <Button variant="outline" size="sm" onClick={refetch} className="mt-2">
-              Try Again
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Link>
             </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+              <p className="text-gray-600">Track your service requests and appointments</p>
+            </div>
           </div>
-        )}
+          
+          <Button asChild>
+            <Link href="/dashboard">
+              Book New Service
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            <span className="ml-2 text-gray-500">Loading bookings...</span>
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Filters */}
+          <div className="mb-6">
+            <div className="flex items-center space-x-2">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Filter:</span>
+              {[
+                { key: 'all', label: 'All Bookings' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'confirmed', label: 'Confirmed' },
+                { key: 'completed', label: 'Completed' }
+              ].map((option) => (
+                <Button
+                  key={option.key}
+                  variant={filter === option.key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilter(option.key as any)}
+                >
+                  {option.label}
+                  {option.key !== 'all' && (
+                    <span className="ml-2 text-xs">
+                      ({bookings.filter(b => b.status === option.key).length})
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* Bookings List */}
-        {!loading && !error && (
-          <div className="space-y-4">
-            {filteredBookings.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {activeTab === "all" ? "No bookings yet" : `No ${activeTab} bookings`}
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  {activeTab === "all"
-                    ? "Start by searching for technicians and booking a service"
-                    : `You don't have any ${activeTab} bookings at the moment`
-                  }
-                </p>
-                {activeTab === "all" && (
-                  <Link href="/dashboard/search">
-                    <Button>Find Technicians</Button>
-                  </Link>
-                )}
+          {/* Bookings List */}
+          {filteredBookings.length === 0 ? (
+            <Card className="p-8 text-center">
+              <div className="text-gray-400 mb-4">
+                <Calendar className="w-16 h-16 mx-auto" />
               </div>
-            ) : (
-              filteredBookings.map((booking) => (
-                <Card key={booking.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      {/* Technician Avatar */}
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={booking.technician.image} alt={booking.technician.name} />
-                        <AvatarFallback>{booking.technician.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-
-                      {/* Booking Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                              {booking.service}
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+              <p className="text-gray-600 mb-4">
+                {filter === 'all' 
+                  ? "You haven't made any bookings yet." 
+                  : `No ${filter} bookings at the moment.`
+                }
+              </p>
+              <Button asChild>
+                <Link href="/dashboard">Find a Technician</Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredBookings.map((booking) => (
+                <Card key={booking.id} className="p-6">
+                  <div className="flex items-start justify-between">
+                    {/* Booking Details */}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={booking.technician.avatar} />
+                          <AvatarFallback>
+                            {booking.technician.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-gray-900">
+                              {booking.technician.name}
                             </h3>
-
-                            {/* Technician Info */}
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-sm text-gray-600">with</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {booking.technician.name}
-                              </span>
-                              <div className="flex items-center">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs text-gray-500 ml-1">
-                                  {booking.technician.rating} ({booking.technician.reviews})
-                                </span>
-                              </div>
-                            </div>
-
-                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                              {booking.description}
-                            </p>
-
-                            {/* Booking Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>{booking.date}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{booking.time}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4" />
-                                <span className="truncate">{booking.location}</span>
-                              </div>
-                              <div className="text-lg font-bold text-gray-900">
-                                {booking.price}
-                              </div>
-                            </div>
-
-                            {/* Devices */}
-                            {booking.devices && booking.devices.length > 0 && (
-                              <div className="mt-3">
-                                <div className="flex flex-wrap gap-2">
-                                  {booking.devices.map((device, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
-                                      {device}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Status and Actions */}
-                          <div className="flex flex-col items-end gap-3">
-                            <Badge className={`flex items-center gap-1 ${getStatusColor(booking.status)}`}>
-                              {getStatusIcon(booking.status)}
-                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                            </Badge>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                              {booking.status === 'pending' && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleStatusUpdate(booking.id, 'confirmed')}
-                                    disabled={operationLoading}
-                                  >
-                                    Confirm
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCancelBooking(booking.id)}
-                                    disabled={operationLoading}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </>
-                              )}
-
-                              {booking.status === 'confirmed' && (
-                                <>
-                                  <Button variant="outline" size="sm">
-                                    <MessageSquare className="h-4 w-4 mr-1" />
-                                    Chat
-                                  </Button>
-                                  <Button variant="outline" size="sm">
-                                    <Phone className="h-4 w-4 mr-1" />
-                                    Call
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCancelBooking(booking.id)}
-                                    disabled={operationLoading}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </>
-                              )}
-
-                              {booking.status === 'completed' && (
-                                <Button variant="outline" size="sm">
-                                  Leave Review
-                                </Button>
-                              )}
-
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{booking.technician.rating}</span>
                             </div>
                           </div>
+                          <p className="text-sm text-gray-600">{booking.technician.specialization}</p>
                         </div>
 
-                        {/* Booking Date */}
-                        <div className="mt-4 pt-3 border-t border-gray-100">
-                          <p className="text-xs text-gray-500">
-                            Booked on {booking.bookingDate}
-                          </p>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={STATUS_CONFIG[booking.status].color}>
+                            {STATUS_CONFIG[booking.status].label}
+                          </Badge>
+                          <Badge className={URGENCY_CONFIG[booking.urgency].color}>
+                            {booking.urgency} priority
+                          </Badge>
                         </div>
                       </div>
+
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-1">
+                          <strong>Service:</strong> {booking.serviceType}
+                        </p>
+                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
+                          {booking.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-6 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-4 h-4" />
+                          <span>Created {getTimeAgo(booking.createdAt)}</span>
+                        </div>
+                        
+                        {booking.scheduledDate && (
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Scheduled for {formatDate(booking.scheduledDate)}</span>
+                          </div>
+                        )}
+                        
+                        {booking.completedAt && (
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Completed {formatDate(booking.completedAt)}</span>
+                          </div>
+                        )}
+
+                        {(booking.estimatedCost || booking.actualCost) && (
+                          <div className="flex items-center space-x-1">
+                            <span className="font-medium">
+                              RWF {(booking.actualCost || booking.estimatedCost)?.toLocaleString()}
+                              {booking.estimatedCost && !booking.actualCost && ' (estimated)'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </CardContent>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col space-y-2 ml-4">
+                      {booking.technician.phone && (
+                        <Button variant="outline" size="sm">
+                          <Phone className="w-4 h-4 mr-2" />
+                          Call
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm">
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Message
+                      </Button>
+                      
+                      {booking.status === 'completed' && (
+                        <Button variant="outline" size="sm">
+                          <Star className="w-4 h-4 mr-2" />
+                          Review
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </Card>
-              ))
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </DashboardLayout>
+    </div>
   )
-} 
+}

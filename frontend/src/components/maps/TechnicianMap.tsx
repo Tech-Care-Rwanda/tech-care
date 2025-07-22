@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, MapPin, Clock, Phone, Navigation } from 'lucide-react'
-import { API_CONFIG, API_ENDPOINTS } from '@/lib/config/api'
+import { technicianService } from '@/lib/services/technicianService'
+import { useRouter } from 'next/navigation'
 
-interface Technician {
+interface TechnicianWithDistance {
   id: string
   name: string
   avatar?: string
@@ -21,20 +22,20 @@ interface Technician {
   estimatedArrival: string
   isAvailable: boolean
   phoneNumber?: string
+  rate: number
 }
 
 interface TechnicianMapProps {
-  onTechnicianSelect?: (technician: Technician) => void
   className?: string
 }
 
 export const TechnicianMap: React.FC<TechnicianMapProps> = ({
-  onTechnicianSelect,
   className = "h-[600px]"
 }) => {
+  const router = useRouter()
   const { position: userLocation, getCurrentPosition, loading: locationLoading } = useGeolocation()
-  const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null)
-  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [selectedTechnician, setSelectedTechnician] = useState<TechnicianWithDistance | null>(null)
+  const [technicians, setTechnicians] = useState<TechnicianWithDistance[]>([])
   const [mapCenter, setMapCenter] = useState({ lat: -1.9441, lng: 30.0619 }) // Default to Kigali
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,74 +46,54 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
     setError(null)
     
     try {
-      const url = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.TECHNICIAN.GET_NEARBY(lat, lng, 10, 20)}`
-      const response = await fetch(url)
+      const response = await technicianService.getAllTechnicians()
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch technicians')
+      if (response.success && response.data) {
+        // Transform API data to map format with mock locations for now
+        const transformedTechnicians: TechnicianWithDistance[] = response.data
+          .filter(tech => tech.available)
+          .map((tech, index) => {
+            // Mock Kigali coordinates for demo
+            const kigaliCoords = [
+              { lat: -1.9470, lng: 30.0588 },
+              { lat: -1.9390, lng: 30.0740 },
+              { lat: -1.9530, lng: 30.0910 },
+              { lat: -1.9350, lng: 30.0450 },
+              { lat: -1.9580, lng: 30.0820 }
+            ]
+            const location = kigaliCoords[index % kigaliCoords.length]
+            const distance = Math.sqrt(
+              Math.pow(location.lat - lat, 2) + Math.pow(location.lng - lng, 2)
+            ) * 111 // Rough km conversion
+            
+            return {
+              id: tech.id,
+              name: tech.name,
+              avatar: tech.avatar,
+              rating: tech.rating,
+              specialization: tech.specialties[0] || 'General Tech',
+              location,
+              distance: Math.round(distance * 10) / 10,
+              estimatedArrival: `${Math.ceil(distance / 0.5)} min`,
+              isAvailable: tech.available,
+              phoneNumber: '+250788123456', // Mock phone
+              rate: tech.hourlyRate
+            }
+          })
+        
+        setTechnicians(transformedTechnicians)
+        
+        // If no technicians found, show message
+        if (transformedTechnicians.length === 0) {
+          setError('No available technicians found in your area.')
+        }
+      } else {
+        setError('Failed to load technicians from API.')
       }
-      
-      const data = await response.json()
-      
-      // Transform API data to component format
-      const transformedTechnicians: Technician[] = data.data.technicians.map((tech: {
-        id: number;
-        name: string;
-        imageUrl?: string;
-        rating: string;
-        specialization: string;
-        latitude: number;
-        longitude: number;
-        distance: number;
-        estimatedArrival: string;
-        isAvailable: boolean;
-        phone?: string;
-      }) => ({
-        id: tech.id.toString(),
-        name: tech.name,
-        avatar: tech.imageUrl,
-        rating: parseFloat(tech.rating),
-        specialization: tech.specialization,
-        location: { lat: tech.latitude, lng: tech.longitude },
-        distance: tech.distance,
-        estimatedArrival: tech.estimatedArrival,
-        isAvailable: tech.isAvailable,
-        phoneNumber: tech.phone
-      }))
-      
-      setTechnicians(transformedTechnicians)
     } catch (err) {
       console.error('Error fetching technicians:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load technicians')
-      
-      // Fallback to mock data for development
-      const mockTechnicians: Technician[] = [
-        {
-          id: "1",
-          name: "Jean Baptiste",
-          avatar: "/images/thisisengineering-hnXf73-K1zo-unsplash.jpg",
-          rating: 4.8,
-          specialization: "Computer Repair",
-          location: { lat: -1.9470, lng: 30.0588 },
-          distance: 1.2,
-          estimatedArrival: "15 mins",
-          isAvailable: true,
-          phoneNumber: "+250788123456"
-        },
-        {
-          id: "2", 
-          name: "Marie Uwimana",
-          avatar: "/images/samsung-memory-KTF38UTEKR4-unsplash.jpg",
-          rating: 4.6,
-          specialization: "Mobile Repair",
-          location: { lat: -1.9390, lng: 30.0740 },
-          distance: 2.1,
-          estimatedArrival: "25 mins",
-          isAvailable: true,
-          phoneNumber: "+250788234567"
-        }
-      ]
-      setTechnicians(mockTechnicians)
+      setError('Failed to connect to backend API.')
+      setTechnicians([])
     } finally {
       setLoading(false)
     }
@@ -122,6 +103,9 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
   useEffect(() => {
     if (userLocation) {
       fetchNearbyTechnicians(userLocation.lat, userLocation.lng)
+    } else {
+      // Load all technicians with default location when no user location
+      fetchNearbyTechnicians(-1.9441, 30.0619) // Default to Kigali center
     }
   }, [userLocation, fetchNearbyTechnicians])
 
@@ -132,16 +116,11 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
     }
   }, [userLocation])
 
-  const handleTechnicianClick = useCallback((technician: Technician) => {
+  const handleTechnicianClick = useCallback((technician: TechnicianWithDistance) => {
     setSelectedTechnician(technician)
     setMapCenter(technician.location)
-    onTechnicianSelect?.(technician)
-  }, [onTechnicianSelect])
+  }, [])
 
-  const handleBookTechnician = (technician: Technician) => {
-    // Navigate to booking flow
-    window.location.href = `/dashboard/book/${technician.id}`
-  }
 
   const getDistanceColor = (distance: number) => {
     if (distance <= 2) return "text-green-600 bg-green-50"
@@ -195,14 +174,14 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
             <MapMarker
               position={userLocation}
               title="Your location"
-              icon={markerIcons.user || {
+              icon={markerIcons.user || (typeof google !== 'undefined' && google.maps && google.maps.SymbolPath ? {
                 fillColor: '#3B82F6',
                 fillOpacity: 1,
                 strokeColor: '#FFFFFF',
                 strokeWeight: 2,
                 scale: 8,
-                path: typeof google !== 'undefined' && google.maps ? google.maps.SymbolPath.CIRCLE : undefined
-              }}
+                path: google.maps.SymbolPath.CIRCLE
+              } : undefined)}
             />
           )}
 
@@ -212,14 +191,14 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
               key={technician.id}
               position={technician.location}
               title={technician.name}
-              icon={markerIcons.technician || {
+              icon={markerIcons.technician || (typeof google !== 'undefined' && google.maps && google.maps.SymbolPath ? {
                 fillColor: '#EF4444',
                 fillOpacity: 1,
                 strokeColor: '#FFFFFF',
                 strokeWeight: 2,
                 scale: 10,
-                path: typeof google !== 'undefined' && google.maps ? google.maps.SymbolPath.CIRCLE : undefined
-              }}
+                path: google.maps.SymbolPath.CIRCLE
+              } : undefined)}
               onClick={() => handleTechnicianClick(technician)}
             >
               <div className="font-semibold">{technician.name}</div>
@@ -301,8 +280,9 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
 
                 <div className="flex space-x-2">
                   <Button 
-                    onClick={() => handleBookTechnician(selectedTechnician)}
-                    className="flex-1 bg-red-500 hover:bg-red-600"
+                    size="sm"
+                    onClick={() => router.push(`/dashboard/book/${selectedTechnician.id}`)}
+                    className="flex-1"
                   >
                     Book Now
                   </Button>
