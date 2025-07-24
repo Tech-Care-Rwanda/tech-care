@@ -204,7 +204,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
 
                     // Provide more specific error messages based on error codes
                     let userFriendlyMessage = 'Profile creation failed. '
-                    
+
                     if (profileError.code === '23505') {
                         userFriendlyMessage += 'An account with this email already exists.'
                     } else if (profileError.code === '23502') {
@@ -214,7 +214,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                     } else {
                         userFriendlyMessage += `${profileError.message}. Check console for details.`
                     }
-                    
+
                     throw new Error(userFriendlyMessage)
                 }
 
@@ -223,7 +223,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                 // Create technician details if role is TECHNICIAN
                 if (userData.role === 'TECHNICIAN' && userData.specialization && insertedProfile) {
                     console.log('Creating technician details for user ID:', insertedProfile.id)
-                    
+
                     const { error: techError } = await supabase
                         .from('technician_details')
                         .insert({
@@ -264,10 +264,12 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             setLoading(true)
             setError(null)
 
-            const { error } = await supabase.auth.signInWithPassword({
+            const { error, data } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
+
+            console.log('🔐 Attempting to sign in with email:', email, password, data, error);
 
             if (error) throw error
 

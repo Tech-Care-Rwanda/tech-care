@@ -45,10 +45,12 @@ export default function LoginPage() {
 
     try {
       const result = await login(formData.email, formData.password)
+      console.log('🔐 Login attempt:', result)
 
       if (result.success) {
         // Redirect will happen automatically via useEffect
         console.log('Login successful')
+        router.push('/dashboard')
       } else {
         setError(result.error || 'Login failed. Please try again.')
       }
