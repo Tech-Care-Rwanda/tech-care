@@ -16,7 +16,10 @@
       "Bash(timeout 10 npm run dev)",
       "Bash(timeout 15 npm run dev)",
       "Bash(timeout 10 npm start)",
-      "Bash(start /B node:*)"
+      "Bash(start /B node:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(npx next dev:*)"
     ],
     "deny": []
   }

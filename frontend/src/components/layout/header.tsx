@@ -24,8 +24,9 @@ const navigationItems = {
     { label: "My Bookings", href: "/dashboard/bookings" },
   ],
   technician: [
+    { label: "Dashboard", href: "/technician/dashboard" },
     { label: "Find Clients", href: "/" },
-    { label: "My Jobs", href: "/dashboard/bookings" },
+    { label: "My Jobs", href: "/technician/dashboard" },
   ],
   admin: [
     { label: "Map View", href: "/" },

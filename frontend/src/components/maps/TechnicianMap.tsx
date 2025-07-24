@@ -90,24 +90,24 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
 
       // Transform Supabase data to map format
       let filteredData = techniciansData.filter(tech => tech.is_available)
-      
+
       // Apply specialization filter if provided
       if (filterSpecialization && filterSpecialization.length > 0) {
-        filteredData = filteredData.filter(tech => 
-          filterSpecialization.some(spec => 
+        filteredData = filteredData.filter(tech =>
+          filterSpecialization.some(spec =>
             tech.specialization.toLowerCase().includes(spec.toLowerCase()) ||
             spec.toLowerCase().includes(tech.specialization.toLowerCase())
           )
         )
       }
-      
+
       const transformedTechnicians: TechnicianWithDistance[] = filteredData
         .map((tech) => {
           // Only use technicians with valid coordinates - NO MOCK DATA
           if (!tech.latitude || !tech.longitude) {
             return null
           }
-          
+
           const location = { lat: tech.latitude, lng: tech.longitude }
 
           const distance = Math.sqrt(
@@ -302,7 +302,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                 <div className="flex space-x-2">
                   <Button
                     size="sm"
-                    onClick={() => router.push(`/dashboard/book/${selectedTechnician.id}`)}
+                    onClick={() => router.push(`/book/${selectedTechnician.id}`)}
                     className="flex-1 text-white hover:opacity-90"
                     style={{ backgroundColor: '#FF385C' }}
                   >
@@ -341,10 +341,10 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
         {/* Error message */}
         {error && !loading && (
           <div className="absolute top-4 right-4 max-w-sm">
-            <Card className="p-3 border-yellow-200 bg-yellow-50">
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium">Using demo data</p>
-                <p className="text-xs mt-1">Connect to backend to see real technicians</p>
+            <Card className="p-3 border-red-200 bg-red-50">
+              <div className="text-sm text-red-800">
+                <p className="font-medium">Error loading technicians</p>
+                <p className="text-xs mt-1">{error}</p>
               </div>
             </Card>
           </div>

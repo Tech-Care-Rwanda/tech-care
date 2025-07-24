@@ -5,30 +5,30 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
-import { getPostLoginRedirect } from '@/lib/utils/authUtils'
 import { NoSSR } from '@/components/ui/no-ssr'
-import { apiService } from '@/lib/services/api'
 
 export default function LoginPage() {
   const router = useRouter()
   const { login, isLoading, user, isAuthenticated, isHydrated } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [loginSuccess, setLoginSuccess] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   })
 
-  // Handle redirect after successful login (only after hydration completes)
+  // Redirect authenticated users to their appropriate dashboard
   useEffect(() => {
-    if (loginSuccess && user?.role && isHydrated && typeof window !== 'undefined') {
-      const redirectPath = getPostLoginRedirect(user.role)
-      console.log('Redirecting to:', redirectPath)
-      router.push(redirectPath)
+    if (isAuthenticated && user && isHydrated) {
+      const roleRedirects = {
+        CUSTOMER: '/dashboard',
+        TECHNICIAN: '/technician/dashboard',
+        ADMIN: '/admin/dashboard'
+      }
+      router.push(roleRedirects[user.role] || '/dashboard')
     }
-  }, [loginSuccess, user, router, isHydrated])
+  }, [isAuthenticated, user, router, isHydrated])
 
   const togglePassword = () => {
     setShowPassword(!showPassword)
@@ -44,25 +44,12 @@ export default function LoginPage() {
     }
 
     try {
-      console.log('Attempting login...')
       const result = await login(formData.email, formData.password)
-      console.log('Login result:', result)
 
       if (result.success) {
-        console.log('Login successful, will redirect based on user role...')
-        setLoginSuccess(true)
-        
-        // Wait a bit for the user state to update, then redirect
-        setTimeout(() => {
-          const storedUser = apiService.getCurrentUser()
-          if (storedUser?.role) {
-            const redirectPath = getPostLoginRedirect(storedUser.role)
-            console.log('Redirecting to:', redirectPath)
-            router.push(redirectPath)
-          }
-        }, 100)
+        // Redirect will happen automatically via useEffect
+        console.log('Login successful')
       } else {
-        console.log('Login failed:', result.error)
         setError(result.error || 'Login failed. Please try again.')
       }
     } catch (err) {
@@ -81,183 +68,148 @@ export default function LoginPage() {
     if (error) setError('')
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechCare</span>
-            </Link>
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/services" className="text-gray-600 hover:text-gray-900 transition-colors">Services</Link>
-              <Link href="/technicians" className="text-gray-600 hover:text-gray-900 transition-colors">Technicians</Link>
-              <Link href="/learn" className="text-gray-600 hover:text-gray-900 transition-colors">Learn</Link>
-            </nav>
-            <div className="hidden md:flex items-center space-x-4">
-              <Link href="/signup" className="text-gray-600 hover:text-gray-900 transition-colors">Sign Up</Link>
-              <Link
-                href="/login"
-                className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
-              >
-                Log In
-              </Link>
-            </div>
-          </div>
+  // Show loading while checking authentication
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-[#FF385C]" />
+          <p className="text-gray-600">Loading...</p>
         </div>
-      </header>
+      </div>
+    )
+  }
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full">
-          {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-              <p className="text-gray-600">Sign in to your TechCare account</p>
+  // Don't render if already authenticated (will redirect)
+  if (isAuthenticated && user) {
+    return null
+  }
+
+  return (
+    <NoSSR>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          {/* Header */}
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Welcome back
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Sign in to your TechCare account
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="rounded-md shadow-sm -space-y-px">
+              <div>
+                <label htmlFor="email" className="sr-only">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-[#FF385C] focus:border-[#FF385C] focus:z-10 sm:text-sm"
+                  placeholder="Email address"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="relative">
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-[#FF385C] focus:border-[#FF385C] focus:z-10 sm:text-sm pr-10"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={togglePassword}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                {error}
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="text-sm text-red-700">{error}</div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Email Field */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
+                  id="remember-me"
+                  name="rememberMe"
+                  type="checkbox"
+                  className="h-4 w-4 text-[#FF385C] focus:ring-[#FF385C] border-gray-300 rounded"
+                  checked={formData.rememberMe}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
-                  required
-                  disabled={isLoading}
-                  autoComplete="email"
                 />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
               </div>
 
-              {/* Password Field */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
-                    placeholder="Enter your password"
-                    required
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePassword}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                    disabled={isLoading}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="rememberMe"
-                    checked={formData.rememberMe}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                    disabled={isLoading}
-                  />
-                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
-                </label>
-                <Link href="/forgot-password" className="text-sm text-red-600 hover:text-red-700">
-                  Forgot password?
+              <div className="text-sm">
+                <Link
+                  href="/forgot-password"
+                  className="font-medium text-[#FF385C] hover:text-[#E5345A]"
+                >
+                  Forgot your password?
                 </Link>
               </div>
+            </div>
 
-              {/* Submit Button */}
+            {/* Submit Button */}
+            <div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#FF385C] hover:bg-[#E5345A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF385C] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
-                  <>
-                    <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                    Signing In...
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  'Sign In'
+                  'Sign in'
                 )}
               </button>
-            </form>
+            </div>
 
             {/* Sign Up Link */}
-            <div className="mt-6 text-center">
+            <div className="text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
-                <Link href="/signup" className="font-medium text-red-600 hover:text-red-700">
+                <Link
+                  href="/signup"
+                  className="font-medium text-[#FF385C] hover:text-[#E5345A]"
+                >
                   Sign up here
                 </Link>
               </p>
             </div>
-
-            {/* Divider */}
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Quick Access (Demo)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Demo Login Buttons */}
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'customer@demo.com', password: 'demo123', rememberMe: false })}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                disabled={isLoading}
-              >
-                Demo Customer Login
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'admin@demo.com', password: 'demo123', rememberMe: false })}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                disabled={isLoading}
-              >
-                Demo Admin Login
-              </button>
-            </div>
-          </div>
+          </form>
         </div>
-      </main>
-    </div>
+      </div>
+    </NoSSR>
   )
 } 

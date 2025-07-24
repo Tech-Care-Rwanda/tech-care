@@ -16,19 +16,19 @@ const SERVICE_CATEGORIES = [
     id: 'computer-repair',
     name: '💻 Computer Repair',
     description: 'Hardware & software issues',
-    specializations: ['Computer Repair', 'Hardware Support', 'Software Installation']
+    specializations: ['Computer Repair', 'Software Installation', 'Hardware Installation', 'Data Recovery', 'Virus Removal']
   },
   {
-    id: 'mobile-devices', 
+    id: 'mobile-devices',
     name: '📱 Mobile & Devices',
     description: 'Phone & tablet repairs',
-    specializations: ['Mobile & Devices', 'Phone Repair', 'Tablet Support']
+    specializations: ['Phone Repair', 'Gaming Console Repair']
   },
   {
     id: 'network-setup',
-    name: '🌐 Network Setup', 
+    name: '🌐 Network Setup',
     description: 'WiFi & connectivity',
-    specializations: ['Network Setup', 'WiFi Installation', 'Network Security']
+    specializations: ['Network Setup', 'Smart Home Setup', 'TV Setup', 'Audio Systems', 'Printer Setup']
   }
 ]
 
@@ -49,6 +49,7 @@ export default function Home() {
         setLoading(true)
         const data = await supabaseService.getTechnicians(true) // Only approved technicians
         console.log('Fetched technicians from database:', data) // Debug log
+        console.log('Technician specializations found:', data?.map(t => t.specialization) || []) // Debug specializations
         setTechnicians(data || [])
         setFilteredTechnicians(data || [])
       } catch (error) {
@@ -71,12 +72,23 @@ export default function Home() {
     } else {
       const category = SERVICE_CATEGORIES.find(cat => cat.id === selectedFilter)
       if (category) {
-        const filtered = technicians.filter(tech => 
-          category.specializations.some(spec => 
+        const filtered = technicians.filter(tech =>
+          category.specializations.some(spec =>
+            // More robust matching - exact match or word-based matching
+            tech.specialization.toLowerCase() === spec.toLowerCase() ||
             tech.specialization.toLowerCase().includes(spec.toLowerCase()) ||
-            spec.toLowerCase().includes(tech.specialization.toLowerCase())
+            spec.toLowerCase().includes(tech.specialization.toLowerCase()) ||
+            // Handle partial word matches (e.g., "Computer" matches "Computer Repair")
+            tech.specialization.toLowerCase().split(' ').some(word =>
+              spec.toLowerCase().split(' ').includes(word) && word.length > 2
+            )
           )
         )
+        console.log(`Filtering for category ${category.name}:`, {
+          categorySpecs: category.specializations,
+          allTechnicians: technicians.map(t => t.specialization),
+          filteredTechnicians: filtered.map(t => t.specialization)
+        })
         setFilteredTechnicians(filtered)
       }
     }
@@ -86,11 +98,17 @@ export default function Home() {
   const getServiceCount = (categoryId: string) => {
     const category = SERVICE_CATEGORIES.find(cat => cat.id === categoryId)
     if (!category) return 0
-    
-    return technicians.filter(tech => 
-      category.specializations.some(spec => 
+
+    return technicians.filter(tech =>
+      category.specializations.some(spec =>
+        // Use the same robust matching logic as the filter
+        tech.specialization.toLowerCase() === spec.toLowerCase() ||
         tech.specialization.toLowerCase().includes(spec.toLowerCase()) ||
-        spec.toLowerCase().includes(tech.specialization.toLowerCase())
+        spec.toLowerCase().includes(tech.specialization.toLowerCase()) ||
+        // Handle partial word matches (e.g., "Computer" matches "Computer Repair")
+        tech.specialization.toLowerCase().split(' ').some(word =>
+          spec.toLowerCase().split(' ').includes(word) && word.length > 2
+        )
       )
     ).length
   }
@@ -153,8 +171,8 @@ export default function Home() {
                   Kigali, Rwanda
                 </div>
               </div>
-              <TechnicianMap 
-                className="h-[500px] lg:h-[600px] w-full" 
+              <TechnicianMap
+                className="h-[500px] lg:h-[600px] w-full"
                 filterSpecialization={selectedFilter ? SERVICE_CATEGORIES.find(cat => cat.id === selectedFilter)?.specializations : undefined}
               />
             </Card>
@@ -197,38 +215,58 @@ export default function Home() {
                 {SERVICE_CATEGORIES.map((category) => {
                   const isActive = selectedFilter === category.id
                   const count = getServiceCount(category.id)
-                  
+
                   return (
                     <div
                       key={category.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                        isActive 
-                          ? 'bg-red-50 border border-red-200' 
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
-                      onClick={() => handleServiceClick(category.id)}
+                      className={`p-3 rounded-lg border transition-colors ${isActive
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        }`}
                     >
-                      <div>
-                        <span className={`text-sm font-medium ${
-                          isActive ? 'text-red-900' : 'text-gray-900'
-                        }`}>
-                          {category.name}
-                        </span>
-                        <p className={`text-xs ${
-                          isActive ? 'text-red-700' : 'text-gray-600'
-                        }`}>
-                          {category.description}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={isActive 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-gray-200 text-gray-700'
-                        }
+                      <div
+                        className="flex items-center justify-between cursor-pointer mb-3"
+                        onClick={() => handleServiceClick(category.id)}
                       >
-                        {count} available
-                      </Badge>
+                        <div>
+                          <span className={`text-sm font-medium ${isActive ? 'text-red-900' : 'text-gray-900'}`}>
+                            {category.name}
+                          </span>
+                          <p className={`text-xs ${isActive ? 'text-red-700' : 'text-gray-600'}`}>
+                            {category.description}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className={isActive
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-200 text-gray-700'
+                          }
+                        >
+                          {count} available
+                        </Badge>
+                      </div>
+
+                      {/* Book Now Button */}
+                      <Button
+                        size="sm"
+                        className="w-full text-white hover:opacity-90"
+                        style={{ backgroundColor: '#FF385C' }}
+                        onClick={() => {
+                          // Filter first to show only relevant technicians
+                          handleServiceClick(category.id)
+                          // Scroll to map to show filtered results
+                          setTimeout(() => {
+                            const mapElement = document.querySelector('[class*="TechnicianMap"]')
+                            if (mapElement) {
+                              mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }
+                          }, 100)
+                        }}
+                        disabled={count === 0}
+                      >
+                        {count === 0 ? 'No Technicians Available' : `Find ${category.name.replace(/💻|📱|🌐/g, '').trim()} Technicians`}
+                      </Button>
                     </div>
                   )
                 })}

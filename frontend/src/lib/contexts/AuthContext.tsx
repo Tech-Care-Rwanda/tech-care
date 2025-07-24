@@ -1,247 +1,119 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserRole } from '@/lib/utils';
-import { apiService } from '@/lib/services/api';
-import {
-  User as BackendUser,
-  SignUpRequest as CustomerSignupData,
-  TechnicianSignUpRequest as TechnicianSignupData,
-  apiRoleToUserRole,
-} from '@/types/api';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useSupabaseAuth, SignUpData } from '@/lib/hooks/useSupabaseAuth';
+import type { User } from '@/lib/supabase';
 
-// Re-export backend User type with some frontend-specific extensions
-export interface User extends BackendUser {
-  // Frontend-specific fields for compatibility
-  name?: string
-  avatar?: string
-  // Customer specific
-  totalBookings?: number
-  completedServices?: number
-  savedTechnicians?: number
-  totalSpent?: number
-  // Technician specific
-  rating?: number
-  totalJobs?: number
-  monthlyEarnings?: number
-  specialties?: string[]
-  isAvailable?: boolean
-}
-
-// Helper function to transform backend user to frontend user
-function transformBackendUser(backendUser: BackendUser): User {
-  return {
-    ...backendUser,
-    name: backendUser.fullName,
-    avatar: backendUser.profileImage,
-    // Add role-specific defaults
-    ...(backendUser.role === 'CUSTOMER' && {
-      totalBookings: 0,
-      completedServices: 0,
-      savedTechnicians: 0,
-      totalSpent: 0
-    }),
-    ...(backendUser.role === 'TECHNICIAN' && {
-      rating: 0,
-      totalJobs: 0,
-      monthlyEarnings: 0,
-      specialties: [],
-      isAvailable: true
-    })
-  };
-}
-
+// Context interface that matches the existing API for compatibility
 interface AuthContextType {
+  // Core auth state
   user: User | null
+  supabaseUser: any // Supabase auth user
   isAuthenticated: boolean
   isLoading: boolean
   isHydrated: boolean
+
+  // Auth actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   customerRegister: (userData: CustomerSignupData) => Promise<{ success: boolean; error?: string }>
   technicianRegister: (userData: TechnicianSignupData) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  updateUser: (userData: Partial<User>) => void
+  updateUser: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>
   refreshUser: () => Promise<void>
+
+  // Role helpers
+  getUserRole: () => 'customer' | 'technician' | 'admin' | null
+  isCustomer: boolean
+  isTechnician: boolean
+  isAdmin: boolean
 }
+
+// Compatibility types for existing components
+export interface CustomerSignupData {
+  fullName: string
+  email: string
+  password: string
+  phoneNumber: string
+}
+
+export interface TechnicianSignupData extends CustomerSignupData {
+  gender: string
+  age: number
+  dateOfBirth: string
+  experience: string
+  specialization: string
+}
+
+// Re-export User type for compatibility
+export type { User }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isHydrated, setIsHydrated] = useState(false)
+  const supabaseAuth = useSupabaseAuth()
 
-  // Load and validate user from localStorage on mount
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Only access localStorage on client side
-        if (typeof window !== 'undefined') {
-          const storedUser = apiService.getCurrentUser();
-          const isAuthenticated = apiService.isAuthenticated();
-
-          if (storedUser && isAuthenticated) {
-            // Transform and set the stored user
-            setUser(transformBackendUser(storedUser));
-          } else {
-            // Clear any invalid storage
-            apiService.clearAuthData();
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (typeof window !== 'undefined') {
-          apiService.clearAuthData();
-        }
-      } finally {
-        setIsLoading(false);
-        setIsHydrated(true);
-      }
-    };
-
-    initializeAuth();
-  }, []);
-
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true)
-
-    try {
-      const response = await apiService.auth.login({ email, password })
-
-      if (response.success && response.data) {
-        // Store auth data first
-        apiService.setAuthData(response.data.user, response.data.token);
-
-        // Transform backend user to frontend user format
-        const transformedUser = transformBackendUser(response.data.user);
-        setUser(transformedUser);
-        return { success: true };
-      } else {
-        return { success: false, error: response.message || 'Login failed' };
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const customerRegister = async (userData: CustomerSignupData): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true)
-
-    try {
-      const response = await apiService.auth.registerCustomer(userData)
-
-      if (response.success && response.data) {
-        const { user, token } = response.data;
-        // Store auth data first
-        apiService.setAuthData(user, token);
-
-        // Transform and set user
-        const transformedUser = transformBackendUser(user);
-        setUser(transformedUser);
-        return { success: true };
-      } else {
-        return { success: false, error: response.message || 'Registration failed' };
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const technicianRegister = async (userData: TechnicianSignupData): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true)
-
-    try {
-      const response = await apiService.auth.registerTechnician(userData)
-
-      if (response.success) {
-        // Technician registration requires admin approval, so no login
-        return { success: true };
-      } else {
-        return { success: false, error: response.message || 'Registration failed' };
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async (): Promise<void> => {
-    setIsLoading(true)
-    try {
-      await apiService.auth.logout()
-      setUser(null)
-    } catch (error) {
-      console.error('Logout error:', error)
-      // Clear user even if logout API fails
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
+  // Map Supabase auth state to existing interface
+  const login = async (email: string, password: string) => {
+    return await supabaseAuth.signIn(email, password)
   }
 
-  const updateUser = (userData: Partial<User>): void => {
-    if (user) {
-      setUser({ ...user, ...userData })
+  const customerRegister = async (userData: CustomerSignupData) => {
+    const signUpData: SignUpData = {
+      fullName: userData.fullName,
+      phoneNumber: userData.phoneNumber,
+      role: 'CUSTOMER'
     }
+    return await supabaseAuth.signUp(userData.email, userData.password, signUpData)
   }
 
-  const refreshUser = async (): Promise<void> => {
-    if (!apiService.isAuthenticated()) return
-
-    try {
-      const response = await apiService.customer.getProfile()
-
-      if (response.success && response.data) {
-        const transformedUser = transformBackendUser(response.data);
-        setUser(transformedUser);
-      }
-    } catch (error) {
-      console.error('Error refreshing user:', error)
-      // If refresh fails, user might be logged out
-      await logout()
+  const technicianRegister = async (userData: TechnicianSignupData) => {
+    const signUpData: SignUpData = {
+      fullName: userData.fullName,
+      phoneNumber: userData.phoneNumber,
+      role: 'TECHNICIAN',
+      gender: userData.gender,
+      age: userData.age,
+      dateOfBirth: userData.dateOfBirth,
+      experience: userData.experience,
+      specialization: userData.specialization
     }
+    return await supabaseAuth.signUp(userData.email, userData.password, signUpData)
   }
 
-  const checkUserSession = () => {
-    const currentUser = apiService.getCurrentUser()
-    const isAuth = apiService.isAuthenticated()
-
-    if (!currentUser || !isAuth) {
-      setUser(null)
-      return false
-    }
-
-    return true
+  const logout = async () => {
+    await supabaseAuth.signOut()
   }
 
-  const getUserRole = (): UserRole => {
-    if (!user) return null
-
-    // Convert API role to user role using the imported function
-    return apiRoleToUserRole(user.role);
+  const updateUser = async (userData: Partial<User>) => {
+    return await supabaseAuth.updateProfile(userData)
   }
 
-  const isAuthenticated = isHydrated && !!user && (typeof window !== 'undefined' ? apiService.isAuthenticated() : false)
+  const refreshUser = async () => {
+    // Supabase automatically handles session refresh
+    // This method is kept for compatibility
+  }
+
+  const getUserRole = (): 'customer' | 'technician' | 'admin' | null => {
+    if (!supabaseAuth.profile) return null
+    return supabaseAuth.profile.role.toLowerCase() as 'customer' | 'technician' | 'admin'
+  }
 
   const value: AuthContextType = {
-    user,
-    isAuthenticated,
-    isLoading,
-    isHydrated,
+    user: supabaseAuth.profile,
+    supabaseUser: supabaseAuth.user,
+    isAuthenticated: !!supabaseAuth.user && !!supabaseAuth.profile,
+    isLoading: supabaseAuth.loading,
+    isHydrated: !supabaseAuth.loading, // Supabase handles hydration differently
     login,
     customerRegister,
     technicianRegister,
     logout,
     updateUser,
-    refreshUser
+    refreshUser,
+    getUserRole,
+    isCustomer: supabaseAuth.profile?.role === 'CUSTOMER',
+    isTechnician: supabaseAuth.profile?.role === 'TECHNICIAN',
+    isAdmin: supabaseAuth.profile?.role === 'ADMIN',
   }
 
   return (
@@ -259,21 +131,17 @@ export function useAuth() {
   return context
 }
 
-// Helper hook for getting current user role safely
-export function useUserRole(): UserRole {
-  const { user } = useAuth()
-  return user?.role ? apiRoleToUserRole(user.role) : null
-}
-
-// Helper hook for checking specific permissions
-export function usePermissions() {
-  const { user } = useAuth()
-
+// Transform function for backward compatibility
+export function transformBackendUser(backendUser: any): User {
   return {
-    canCreateBookings: user?.role === 'CUSTOMER',
-    canManageJobs: user?.role === 'TECHNICIAN',
-    canAccessAdmin: user?.role === 'ADMIN',
-    canEditProfile: !!user,
-    canViewDashboard: !!user
+    id: backendUser.id,
+    full_name: backendUser.fullName || backendUser.full_name,
+    email: backendUser.email,
+    phone_number: backendUser.phoneNumber || backendUser.phone_number,
+    role: backendUser.role,
+    is_active: backendUser.isActive ?? backendUser.is_active ?? true,
+    created_at: backendUser.createdAt || backendUser.created_at,
+    updated_at: backendUser.updatedAt || backendUser.updated_at,
+    supabase_user_id: backendUser.supabase_user_id
   }
 } 

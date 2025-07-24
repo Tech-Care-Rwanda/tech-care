@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SearchProvider } from "@/lib/contexts/SearchContext";
-import { AuthProvider } from "@/lib/contexts/AuthContext";
-import { NavigationBar } from "@/components/layout/NavigationBar";
+import { AuthProvider } from '@/lib/contexts/AuthContext'
+import { NavigationBar } from '@/components/layout/NavigationBar'
 
-const inter = Inter({
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-inter",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "TechCare Rwanda - Professional Tech Support Services",
-  description: "Get expert technical support, remote help, training, and 24/7 assistance in Rwanda. Professional technicians at your service.",
-  keywords: "tech support, Rwanda, technical assistance, remote help, computer repair, IT services",
+  title: "TechCare - Professional Tech Support Services",
+  description: "Connect with qualified technicians for all your technology needs in Rwanda. Computer repair, mobile devices, network setup, and more.",
 };
 
 export default function RootLayout({
@@ -24,21 +27,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans antialiased bg-gray-50`}
-        suppressHydrationWarning={true} // Prevents hydration warnings from browser extensions like Grammarly
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <AuthProvider>
-          <SearchProvider>
-            <div className="min-h-screen flex flex-col">
-              {/* Fixed Navigation */}
-              <NavigationBar />
-              
-              {/* Main Content Area */}
-              <main className="flex-1 pt-16">
-                {children}
-              </main>
-            </div>
-          </SearchProvider>
+          <NavigationBar />
+          <main className="pt-16">
+            {children}
+          </main>
         </AuthProvider>
       </body>
     </html>

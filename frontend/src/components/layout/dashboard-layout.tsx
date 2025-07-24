@@ -39,9 +39,10 @@ const navigationMenus = {
     { icon: User, label: "Profile", href: "/dashboard/profile" },
   ],
   technician: [
+    { icon: Wrench, label: "Dashboard", href: "/technician/dashboard" },
     { icon: Search, label: "Find Clients", href: "/" },
-    { icon: Calendar, label: "My Jobs", href: "/dashboard/bookings" },
-    { icon: User, label: "Profile", href: "/dashboard/profile" },
+    { icon: Calendar, label: "My Jobs", href: "/technician/dashboard" },
+    { icon: User, label: "Profile", href: "/technician/profile" },
   ],
   admin: [
     { icon: Search, label: "Map View", href: "/" },
