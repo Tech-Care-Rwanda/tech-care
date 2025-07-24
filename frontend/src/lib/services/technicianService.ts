@@ -1,10 +1,16 @@
 /**
  * Technician Service for TechCare Frontend
- * Handles technician-related API calls
+ * Handles technician-related API calls using Next.js API routes and Supabase
  */
 
-import { apiService, ApiResponse } from './api'
 import { API_ENDPOINTS } from '@/lib/config/api'
+
+// Simple API response interface
+export interface ApiResponse<T> {
+    success: boolean
+    data?: T
+    error?: string
+}
 
 export interface Technician {
     id: string
@@ -57,43 +63,11 @@ export interface SavedTechnician extends Technician {
 class TechnicianService {
     // Get all approved technicians
     async getAllTechnicians(): Promise<ApiResponse<Technician[]>> {
-        try {
-            const response = await apiService.get<any[]>(API_ENDPOINTS.ADMIN.GET_TECHNICIANS)
-
-            if (response.success && response.data) {
-                // Transform backend technician data to frontend format
-                const technicians: Technician[] = response.data
-                    .filter(tech => tech.technicianDetails?.approvalStatus === 'APPROVED')
-                    .map(tech => ({
-                        id: tech.id.toString(),
-                        name: tech.fullName,
-                        avatar: tech.technicianDetails?.imageUtl || '/placeholder-avatar.jpg',
-                        rating: tech.technicianDetails?.rate || 0,
-                        reviewCount: Math.floor(Math.random() * 100) + 10, // TODO: Add review count to backend
-                        specialties: tech.technicianDetails?.specialization ? [tech.technicianDetails.specialization] : [],
-                        location: 'Kigali', // TODO: Add location to backend model
-                        hourlyRate: Math.floor(Math.random() * 15000) + 10000, // TODO: Add hourly rate to backend
-                        available: tech.technicianDetails?.isAvailable || false,
-                        responseTime: '< 2 hours', // TODO: Add response time to backend
-                        completedJobs: Math.floor(Math.random() * 200) + 50, // TODO: Add job count to backend
-                        description: `Experienced ${tech.technicianDetails?.specialization} specialist with ${tech.technicianDetails?.experience} of experience.`,
-                        verified: tech.technicianDetails?.approvalStatus === 'APPROVED',
-                        distance: Math.floor(Math.random() * 20) + 1,
-                        technicianDetails: tech.technicianDetails
-                    }))
-
-                return {
-                    success: true,
-                    data: technicians
-                }
-            }
-
-            return response
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch technicians'
-            }
+        // Note: This method is deprecated. Use Supabase service directly instead.
+        console.warn('getAllTechnicians is deprecated. Use Supabase service directly.')
+        return {
+            success: false,
+            error: 'This method is deprecated. Use Supabase service directly.'
         }
     }
 
@@ -157,10 +131,11 @@ class TechnicianService {
     // Get technician by ID
     async getTechnicianById(id: string): Promise<ApiResponse<Technician>> {
         try {
-            const response = await apiService.get<any>(API_ENDPOINTS.ADMIN.GET_TECHNICIAN_DETAILS(id))
+            const response = await fetch(`${API_ENDPOINTS.ADMIN.GET_TECHNICIAN_DETAILS(id)}`)
+            const data = await response.json()
 
-            if (response.success && response.data) {
-                const tech = response.data
+            if (response.ok && data) {
+                const tech = data
                 const technician: Technician = {
                     id: tech.id.toString(),
                     name: tech.fullName,
@@ -184,7 +159,10 @@ class TechnicianService {
                 }
             }
 
-            return response
+            return {
+                success: false,
+                error: 'Failed to fetch technician details'
+            }
         } catch (error) {
             return {
                 success: false,

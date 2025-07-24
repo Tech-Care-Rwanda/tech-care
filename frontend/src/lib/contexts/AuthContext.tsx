@@ -98,6 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return supabaseAuth.profile.role.toLowerCase() as 'customer' | 'technician' | 'admin'
   }
 
+  // Debug logging for authentication state
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Auth State Debug:', {
+      hasUser: !!supabaseAuth.user,
+      hasProfile: !!supabaseAuth.profile,
+      isLoading: supabaseAuth.loading,
+      profile: supabaseAuth.profile,
+      error: supabaseAuth.error
+    })
+  }
+
   const value: AuthContextType = {
     user: supabaseAuth.profile,
     supabaseUser: supabaseAuth.user,

@@ -5,7 +5,7 @@
 
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +31,7 @@ import {
     AlertCircle,
     Navigation
 } from 'lucide-react'
-import { useTechnicianBookings } from '@/lib/hooks/useTechnicianDashboard'
+import { useTechnicianBookings, useTechnicianProfile } from '@/lib/hooks/useTechnicianDashboard'
 import type { TechnicianBooking } from '@/lib/hooks/useTechnicianDashboard'
 
 const EMERGENCY_NUMBER = "+250791995143"
@@ -71,22 +71,33 @@ const URGENCY_CONFIG = {
 }
 
 function TechnicianDashboardContent() {
-    const { bookings, loading, error, refetch, updateBookingStatus } = useTechnicianBookings()
+    const { bookings, loading, error, fetchBookings, updateBookingStatus } = useTechnicianBookings()
+    const { profile, updateAvailability } = useTechnicianProfile()
     const [isAvailable, setIsAvailable] = useState(true)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+    const [updatingAvailability, setUpdatingAvailability] = useState(false)
+
+    // For demo purposes, use John Uwimana's technician user_id
+    // In production, this would come from authentication context
+    const DEMO_TECHNICIAN_ID = '550e8400-e29b-41d4-a716-446655440001' // John Uwimana
+
+    // Load bookings for this technician on mount
+    useEffect(() => {
+        fetchBookings(DEMO_TECHNICIAN_ID)
+    }, [])
 
     // Mock technician profile data - will be replaced with auth context
     const technicianProfile = {
-        id: '1',
-        name: 'Jean Claude Habimana',
+        id: DEMO_TECHNICIAN_ID,
+        name: 'John Uwimana', // Updated to match our demo technician
         avatar: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
-        specialization: 'Computer & Network Specialist',
+        specialization: 'Computer Repair Specialist', // Updated to match database
         rating: 4.8,
         totalJobs: 142,
         monthlyEarnings: 85000,
         joinDate: '2023-06',
-        phone: '+250 788 123 456',
-        location: 'Kigali, Nyamirambo',
+        phone: '+250 781 234 567', // Updated to match database
+        location: 'Kigali, Rwanda',
         certifications: ['CompTIA A+', 'Network+', 'Microsoft Certified']
     }
 
@@ -96,6 +107,26 @@ function TechnicianDashboardContent() {
 
     const handleMessage = (phoneNumber?: string) => {
         window.open(`sms:${phoneNumber || EMERGENCY_NUMBER}?body=Hi, regarding your service request...`)
+    }
+
+    const handleAvailabilityChange = async (newAvailability: boolean) => {
+        try {
+            setUpdatingAvailability(true)
+            setIsAvailable(newAvailability) // Optimistic update for immediate UI feedback
+            
+            const result = await updateAvailability(DEMO_TECHNICIAN_ID, newAvailability)
+            
+            if (result.warning) {
+                console.warn('Availability update warning:', result.warning)
+            }
+            
+        } catch (error) {
+            console.error('Failed to update availability:', error)
+            // Revert optimistic update on error
+            setIsAvailable(!newAvailability)
+        } finally {
+            setUpdatingAvailability(false)
+        }
     }
 
     const handleBookingAction = async (
@@ -180,12 +211,13 @@ function TechnicianDashboardContent() {
                             <span className="text-sm text-gray-600">Available</span>
                             <Switch
                                 checked={isAvailable}
-                                onCheckedChange={setIsAvailable}
+                                onCheckedChange={handleAvailabilityChange}
+                                disabled={updatingAvailability}
                             />
                         </div>
                         <Button
                             variant="outline"
-                            onClick={() => refetch()}
+                            onClick={() => fetchBookings(DEMO_TECHNICIAN_ID)}
                             disabled={loading}
                         >
                             <Navigation className="w-4 h-4 mr-2" />
@@ -271,7 +303,7 @@ function TechnicianDashboardContent() {
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading requests</h3>
                                     <p className="text-gray-600 mb-4">{error}</p>
                                     <Button
-                                        onClick={() => refetch()}
+                                        onClick={() => fetchBookings(DEMO_TECHNICIAN_ID)}
                                         className="text-white hover:opacity-90"
                                         style={{ backgroundColor: '#FF385C' }}
                                     >
@@ -427,7 +459,8 @@ function TechnicianDashboardContent() {
                                 </h3>
                                 <Switch
                                     checked={isAvailable}
-                                    onCheckedChange={setIsAvailable}
+                                    onCheckedChange={handleAvailabilityChange}
+                                    disabled={updatingAvailability}
                                 />
                             </div>
                             <p className={`text-sm ${isAvailable ? 'text-green-700' : 'text-orange-700'}`}>

@@ -4,7 +4,19 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ApiError } from '@/lib/services/api';
+
+// Simple ApiError class (replaces deleted one)
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public code?: string,
+    public details?: Record<string, any>
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 // Error Types
 export interface AppError {
@@ -39,7 +51,7 @@ export function normalizeError(error: unknown): AppError {
 
   if (error instanceof ApiError) {
     let type: AppError['type'] = 'api';
-    
+
     if (error.statusCode === 401 || error.statusCode === 403) {
       type = 'auth';
     } else if (error.statusCode === 400 && error.code === 'VALIDATION_ERROR') {
@@ -88,7 +100,7 @@ export function getErrorMessage(error: AppError): string {
   switch (error.type) {
     case 'network':
       return 'Connection problem. Please check your internet and try again.';
-    
+
     case 'auth':
       if (error.statusCode === 401) {
         return 'Your session has expired. Please sign in again.';
@@ -97,10 +109,10 @@ export function getErrorMessage(error: AppError): string {
         return 'You don\'t have permission to perform this action.';
       }
       return error.message || 'Authentication failed';
-    
+
     case 'validation':
       return error.message || 'Please check your input and try again.';
-    
+
     case 'api':
       if (error.statusCode === 429) {
         return 'Too many requests. Please wait a moment and try again.';
@@ -109,7 +121,7 @@ export function getErrorMessage(error: AppError): string {
         return 'Server error. Please try again later.';
       }
       return error.message || 'Something went wrong. Please try again.';
-    
+
     default:
       return error.message || 'An unexpected error occurred. Please try again.';
   }
@@ -149,9 +161,9 @@ export function useAsyncOperation<T = any>() {
       abortControllerRef.current = new AbortController();
     }
 
-    setState(prev => ({ 
-      ...prev, 
-      loading: true, 
+    setState(prev => ({
+      ...prev,
+      loading: true,
       error: null,
       progress: 0,
     }));
@@ -182,7 +194,7 @@ export function useAsyncOperation<T = any>() {
       return { success: true, data: result };
     } catch (error) {
       const normalizedError = normalizeError(error);
-      
+
       setState({
         data: null,
         loading: false,
@@ -198,7 +210,7 @@ export function useAsyncOperation<T = any>() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    
+
     setState({
       data: null,
       loading: false,
@@ -239,12 +251,12 @@ export function useAsyncQueue() {
   const [errors, setErrors] = useState<Map<string, AppError>>(new Map());
 
   const addOperation = useCallback((id: string, operation?: string) => {
-    setOperations(prev => new Map(prev).set(id, { 
-      isLoading: true, 
+    setOperations(prev => new Map(prev).set(id, {
+      isLoading: true,
       operation,
       progress: 0,
     }));
-    
+
     // Clear any previous error for this operation
     setErrors(prev => {
       const newErrors = new Map(prev);
@@ -274,13 +286,13 @@ export function useAsyncQueue() {
 
   const failOperation = useCallback((id: string, error: unknown) => {
     const normalizedError = normalizeError(error);
-    
+
     setOperations(prev => {
       const newOps = new Map(prev);
       newOps.delete(id);
       return newOps;
     });
-    
+
     setErrors(prev => new Map(prev).set(id, normalizedError));
   }, []);
 
@@ -339,33 +351,33 @@ export function useRetry() {
     } = options;
 
     let lastError: AppError;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           setIsRetrying(true);
           setRetryCount(attempt);
-          
+
           // Wait with exponential backoff
           const waitTime = delay * Math.pow(backoffFactor, attempt - 1);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
 
         const result = await operation();
-        
+
         // Success - reset retry state
         setRetryCount(0);
         setIsRetrying(false);
-        
+
         return { success: true, data: result };
       } catch (error) {
         lastError = normalizeError(error);
-        
+
         // Check if we should retry
         if (attempt < maxRetries && retryOn(lastError)) {
           continue;
         }
-        
+
         // Max retries reached or shouldn't retry
         break;
       }

@@ -80,6 +80,18 @@ export function useSupabaseAuth(): AuthState & AuthActions {
     const fetchUserProfile = async (supabaseUserId: string) => {
         try {
             setError(null)
+            console.log('Fetching profile for user ID:', supabaseUserId)
+
+            // First, try to see if ANY users exist with this email as a sanity check
+            const { data: emailCheck } = await supabase
+                .from('users')
+                .select('supabase_user_id, email, full_name')
+                .eq('email', 'customer1@gmail.com')
+                .maybeSingle()
+
+            console.log('Email check result:', emailCheck)
+
+            // Now try the main query
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
@@ -87,15 +99,30 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                 .single()
 
             if (error) {
-                // Only log actual errors, not missing profiles for anonymous users
-                if (error.code !== 'PGRST116') {
-                    console.error('Error fetching profile:', error)
-                    setError('Failed to fetch user profile')
-                } else {
-                    // Profile doesn't exist - this is normal for anonymous users
+                console.log('Profile fetch error details:', {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    queriedUserId: supabaseUserId,
+                    userIdType: typeof supabaseUserId,
+                    userIdLength: supabaseUserId?.length
+                })
+
+                // Handle missing profile (PGRST116 = no rows returned)
+                if (error.code === 'PGRST116') {
+                    console.log('❌ No profile found for user:', supabaseUserId)
+                    console.log('🔍 This could mean:')
+                    console.log('  1. Profile was not created in database')
+                    console.log('  2. UUID mismatch between auth and profile')
+                    console.log('  3. Database caching issue')
                     setProfile(null)
+                } else {
+                    console.error('Unexpected error fetching profile:', error)
+                    setError('Failed to fetch user profile')
                 }
             } else {
+                console.log('✅ Profile found successfully:', data)
                 setProfile(data)
             }
         } catch (err) {
@@ -121,24 +148,55 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             if (authError) throw authError
 
             if (authData.user) {
+                // Prepare user profile data
+                const profileData = {
+                    supabase_user_id: authData.user.id,
+                    email: email,
+                    full_name: userData.fullName,
+                    phone_number: userData.phoneNumber,
+                    role: userData.role || 'CUSTOMER',
+                    is_active: true
+                }
+
+                console.log('Attempting to insert profile data:', profileData)
+
+                // First test if we can access the users table
+                const { error: accessError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .limit(1)
+
+                if (accessError) {
+                    console.error('Cannot access users table:', accessError)
+                    throw new Error(`Database access error: ${accessError.message}`)
+                }
+
                 // Create user profile in database
                 const { error: profileError } = await supabase
                     .from('users')
-                    .insert({
-                        supabase_user_id: authData.user.id,
-                        email,
-                        full_name: userData.fullName,
-                        phone_number: userData.phoneNumber,
-                        role: userData.role || 'CUSTOMER',
-                        is_active: true,
-                    })
+                    .insert(profileData)
 
                 if (profileError) {
-                    console.error('Profile creation error:', profileError)
-                    // Clean up auth user if profile creation fails
-                    await supabase.auth.admin.deleteUser(authData.user.id)
-                    throw new Error('Failed to create user profile')
+                    console.error('Profile creation error details:', {
+                        message: profileError.message,
+                        details: profileError.details,
+                        hint: profileError.hint,
+                        code: profileError.code,
+                        profileData: profileData
+                    })
+
+                    // Try to clean up auth user if profile creation fails
+                    try {
+                        console.log('Attempting to sign out due to profile creation failure...')
+                        await supabase.auth.signOut()
+                    } catch (cleanupError) {
+                        console.error('Cleanup error:', cleanupError)
+                    }
+
+                    throw new Error(`Profile creation failed: ${profileError.message}. Check console for details.`)
                 }
+
+                console.log('Profile created successfully for user:', authData.user.id)
 
                 // Create technician details if role is TECHNICIAN
                 if (userData.role === 'TECHNICIAN' && userData.specialization) {

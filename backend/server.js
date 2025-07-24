@@ -3,14 +3,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const supabaseService = require('./services/supabaseService');
-const AutheticationRoutes = require('./routes/AutheticationRoutes');
-const CustomerRoutes = require('./routes/CustomerRoutes')
-const AdminRoutes = require('./routes/AdminRoutes')
-const CategoryRoutes = require('./routes/Category/CategoryRoutes');
-const ServicesRoutes = require('./routes/Services/ServicesRoutes');
-const BookingRoutes = require('./routes/BookingRoutes')
-const TechnicianRoutes = require('./routes/TechnicianRoutes')
-const NearbyTechniciansRoutes = require('./routes/NearbyTechniciansRoutes')
 const path = require('path');
 
 // Load environment variables
@@ -65,39 +57,31 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// Set up routes
-app.use('/api/v1/auth', AutheticationRoutes);
-app.use('/api/v1/customer',  CustomerRoutes);
-app.use('/api/v1/admin', AdminRoutes);
-app.use('/api/v1/categories', CategoryRoutes);
-app.use('api/v1/services', ServicesRoutes);
-app.use('/api/v1/bookings', BookingRoutes);
-app.use('/api/v1/technicians', TechnicianRoutes);
-app.use('/api/v1/technicians', NearbyTechniciansRoutes);
+// No legacy routes - using Supabase and Next.js API routes only
 
 // Health check route
 app.get('/health', async (req, res) => {
   try {
     const dbStatus = await supabaseService.testConnection();
-    
+
     if (dbStatus.connected) {
-      res.json({ 
-        status: 'OK', 
+      res.json({
+        status: 'OK',
         database: 'Supabase Connected',
         timestamp: new Date().toISOString()
       });
     } else {
-      res.status(500).json({ 
-        status: 'Error', 
-        database: 'Supabase Disconnected', 
-        error: dbStatus.error 
+      res.status(500).json({
+        status: 'Error',
+        database: 'Supabase Disconnected',
+        error: dbStatus.error
       });
     }
   } catch (error) {
-    res.status(500).json({ 
-      status: 'Error', 
-      database: 'Connection Failed', 
-      error: error.message 
+    res.status(500).json({
+      status: 'Error',
+      database: 'Connection Failed',
+      error: error.message
     });
   }
 });

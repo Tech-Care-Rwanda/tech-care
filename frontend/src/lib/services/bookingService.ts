@@ -1,13 +1,32 @@
 /**
  * Booking Service for TechCare Frontend
- * Handles booking-related API calls to backend
+ * Handles booking-related API calls using Next.js API routes and Supabase
  */
 
-import { apiService, ApiResponse, ApiError } from './api'
 import { API_ENDPOINTS } from '@/lib/config/api'
 
+// Simple API response interface
+export interface ApiResponse<T> {
+    success: boolean
+    data?: T
+    error?: string
+}
+
+// Simple ApiError class
+export class ApiError extends Error {
+    constructor(
+        message: string,
+        public statusCode: number,
+        public code?: string,
+        public details?: Record<string, any>
+    ) {
+        super(message);
+        this.name = 'ApiError';
+    }
+}
+
 // Backend booking categories
-export type BookingCategory = 
+export type BookingCategory =
     | 'COMPUTER_REPAIR' | 'LAPTOP_REPAIR' | 'PHONE_REPAIR' | 'TABLET_REPAIR'
     | 'NETWORK_SETUP' | 'SOFTWARE_INSTALLATION' | 'DATA_RECOVERY'
     | 'VIRUS_REMOVAL' | 'HARDWARE_UPGRADE' | 'CONSULTATION'
@@ -130,7 +149,7 @@ class BookingService {
 
     // Format category for display
     private formatCategory(category: BookingCategory): string {
-        return category.split('_').map(word => 
+        return category.split('_').map(word =>
             word.charAt(0) + word.slice(1).toLowerCase()
         ).join(' ')
     }
@@ -157,17 +176,18 @@ class BookingService {
                 return value
             }
         }
-        
+
         return 'CONSULTATION' // Default category
     }
 
     // Get user's bookings
     async getUserBookings(): Promise<ApiResponse<Booking[]>> {
         try {
-            const response = await apiService.get<BackendBooking[]>(API_ENDPOINTS.BOOKING.GET_ALL)
-            
-            if (response.success && response.data) {
-                const transformedBookings = response.data.map(booking => 
+            const response = await fetch(API_ENDPOINTS.BOOKING.GET_ALL)
+            const data: ApiResponse<BackendBooking[]> = await response.json()
+
+            if (data.success && data.data) {
+                const transformedBookings = data.data.map(booking =>
                     this.transformBooking(booking)
                 )
                 return {
@@ -183,21 +203,21 @@ class BookingService {
             //     success: true,
             //     data: mockBookings
             // }
-            
+
             return {
                 success: false,
-                error: response.error || 'Failed to fetch bookings'
+                error: data.error || 'Failed to fetch bookings'
             }
         } catch (error) {
             console.error('Error fetching bookings:', error)
-            
+
             // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
             // const mockBookings = this.getMockBookings()
             // return {
             //     success: true,
             //     data: mockBookings
             // }
-            
+
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch bookings'
@@ -219,13 +239,17 @@ class BookingService {
                 estimatedHours: bookingData.urgency === 'urgent' ? 2 : 4 // Estimate based on urgency
             }
 
-            const response = await apiService.post<{ booking: BackendBooking }>(
-                API_ENDPOINTS.BOOKING.CREATE, 
-                backendData
-            )
+            const response = await fetch(API_ENDPOINTS.BOOKING.CREATE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(backendData)
+            })
+            const data: ApiResponse<{ booking: BackendBooking }> = await response.json()
 
-            if (response.success && response.data) {
-                const transformedBooking = this.transformBooking(response.data.booking)
+            if (data.success && data.data) {
+                const transformedBooking = this.transformBooking(data.data.booking)
                 return {
                     success: true,
                     data: transformedBooking
@@ -234,7 +258,7 @@ class BookingService {
 
             return {
                 success: false,
-                error: response.error || 'Failed to create booking'
+                error: data.error || 'Failed to create booking'
             }
         } catch (error) {
             console.error('Error creating booking:', error)
@@ -250,20 +274,20 @@ class BookingService {
         try {
             // Parse date (assumes format like "2025-01-15")
             const datePart = new Date(date)
-            
+
             // Extract time (assumes format like "2:00 PM - 4:00 PM", take start time)
             const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/)
             if (timeMatch) {
                 let hours = parseInt(timeMatch[1])
                 const minutes = parseInt(timeMatch[2])
                 const period = timeMatch[3]
-                
+
                 if (period === 'PM' && hours !== 12) hours += 12
                 if (period === 'AM' && hours === 12) hours = 0
-                
+
                 datePart.setHours(hours, minutes, 0, 0)
             }
-            
+
             return datePart.toISOString()
         } catch {
             // Return current time if parsing fails
@@ -277,13 +301,17 @@ class BookingService {
             // Convert frontend status to backend format
             const backendStatus = status.toUpperCase() as BookingStatus
 
-            const response = await apiService.put<{ booking: BackendBooking }>(
-                API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId),
-                { status: backendStatus }
-            )
+            const response = await fetch(API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: backendStatus })
+            })
+            const data: ApiResponse<{ booking: BackendBooking }> = await response.json()
 
-            if (response.success && response.data) {
-                const transformedBooking = this.transformBooking(response.data.booking)
+            if (data.success && data.data) {
+                const transformedBooking = this.transformBooking(data.data.booking)
                 return {
                     success: true,
                     data: transformedBooking
@@ -292,7 +320,7 @@ class BookingService {
 
             return {
                 success: false,
-                error: response.error || 'Failed to update booking status'
+                error: data.error || 'Failed to update booking status'
             }
         } catch (error) {
             console.error('Error updating booking status:', error)
@@ -306,12 +334,16 @@ class BookingService {
     // Cancel booking
     async cancelBooking(bookingId: string): Promise<ApiResponse<void>> {
         try {
-            const response = await apiService.put(
-                API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId),
-                { status: 'CANCELLED' }
-            )
+            const response = await fetch(API_ENDPOINTS.BOOKING.UPDATE_STATUS(bookingId), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 'CANCELLED' })
+            })
+            const data: ApiResponse<void> = await response.json()
 
-            if (response.success) {
+            if (data.success) {
                 return {
                     success: true,
                     data: undefined
@@ -320,7 +352,7 @@ class BookingService {
 
             return {
                 success: false,
-                error: response.error || 'Failed to cancel booking'
+                error: data.error || 'Failed to cancel booking'
             }
         } catch (error) {
             console.error('Error cancelling booking:', error)
