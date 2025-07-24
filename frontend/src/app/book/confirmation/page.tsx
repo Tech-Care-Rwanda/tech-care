@@ -1,27 +1,22 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
     CheckCircle,
     Calendar,
     Clock,
-    MapPin,
-    Phone,
-    Mail,
     MessageSquare,
     ArrowRight,
     Home
 } from 'lucide-react'
-import { supabaseService, Booking } from '@/lib/supabase'
+import { Booking } from '@/lib/supabase'
 import Link from 'next/link'
 
 export default function BookingConfirmationPage() {
-    const router = useRouter()
     const searchParams = useSearchParams()
     const bookingId = searchParams.get('bookingId')
 

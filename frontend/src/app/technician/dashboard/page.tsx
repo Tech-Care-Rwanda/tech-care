@@ -9,11 +9,13 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { SafeAvatar } from '@/components/ui/safe-avatar'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import { TechnicianRoute } from '@/components/auth/ProtectedRoute'
+import { TechnicianOnboarding } from '@/components/onboarding/TechnicianOnboarding'
 import {
     Clock,
     MapPin,
@@ -23,9 +25,6 @@ import {
     Calendar,
     CheckCircle,
     XCircle,
-    PlayCircle,
-    User,
-    Settings,
     DollarSign,
     Wrench,
     TrendingUp,
@@ -37,33 +36,33 @@ import type { TechnicianBooking } from '@/lib/hooks/useTechnicianDashboard'
 
 const EMERGENCY_NUMBER = "+250791995143"
 
-const STATUS_CONFIG = {
-    pending: {
-        label: 'Pending Review',
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        icon: Clock
-    },
-    confirmed: {
-        label: 'Confirmed',
-        color: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: CheckCircle
-    },
-    in_progress: {
-        label: 'In Progress',
-        color: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: PlayCircle
-    },
-    completed: {
-        label: 'Completed',
-        color: 'bg-green-100 text-green-800 border-green-200',
-        icon: CheckCircle
-    },
-    cancelled: {
-        label: 'Cancelled',
-        color: 'bg-red-100 text-red-800 border-red-200',
-        icon: XCircle
-    }
-}
+// const STATUS_CONFIG = {
+//     pending: {
+//         label: 'Pending Review',
+//         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+//         icon: Clock
+//     },
+//     confirmed: {
+//         label: 'Confirmed',
+//         color: 'bg-blue-100 text-blue-800 border-blue-200',
+//         icon: CheckCircle
+//     },
+//     in_progress: {
+//         label: 'In Progress',
+//         color: 'bg-purple-100 text-purple-800 border-purple-200',
+//         icon: PlayCircle
+//     },
+//     completed: {
+//         label: 'Completed',
+//         color: 'bg-green-100 text-green-800 border-green-200',
+//         icon: CheckCircle
+//     },
+//     cancelled: {
+//         label: 'Cancelled',
+//         color: 'bg-red-100 text-red-800 border-red-200',
+//         icon: XCircle
+//     }
+// }
 
 const URGENCY_CONFIG = {
     low: { label: 'Standard', color: 'bg-gray-100 text-gray-700' },
@@ -73,8 +72,8 @@ const URGENCY_CONFIG = {
 
 function TechnicianDashboardContent() {
     const { bookings, loading, error, fetchBookings, updateBookingStatus } = useTechnicianBookings()
-    const { profile: techProfile, updateAvailability } = useTechnicianProfile()
-    const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
+    const { updateAvailability } = useTechnicianProfile()
+    const { profile, loading: authLoading } = useSupabaseAuth()
     const [isAvailable, setIsAvailable] = useState(true)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [updatingAvailability, setUpdatingAvailability] = useState(false)
@@ -87,13 +86,13 @@ function TechnicianDashboardContent() {
             return
         }
         fetchBookings(profile.id)
-    }, [profile, authLoading])
+    }, [profile, authLoading, fetchBookings])
 
     // Use actual technician profile data from authentication context
     const technicianProfile = profile ? {
         id: profile.id,
         name: profile.full_name || 'Technician',
-        avatar: profile.avatar_url || '/images/default-avatar.jpg',
+        avatar: profile.avatar_url,
         specialization: 'Technical Service', // Could be expanded with technician_details
         rating: 4.8, // TODO: Calculate from reviews
         totalJobs: 142, // TODO: Calculate from bookings
@@ -173,15 +172,15 @@ function TechnicianDashboardContent() {
         }
     }
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-    }
+    // const formatDate = (dateString: string) => {
+    //     const date = new Date(dateString)
+    //     return date.toLocaleDateString('en-US', {
+    //         month: 'short',
+    //         day: 'numeric',
+    //         hour: '2-digit',
+    //         minute: '2-digit'
+    //     })
+    // }
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-RW', {
@@ -194,7 +193,7 @@ function TechnicianDashboardContent() {
     // Categorize bookings
     const pendingBookings = bookings.filter(b => b.status === 'pending')
     const confirmedBookings = bookings.filter(b => ['confirmed', 'in_progress'].includes(b.status))
-    const completedBookings = bookings.filter(b => b.status === 'completed')
+    // const completedBookings = bookings.filter(b => b.status === 'completed')
     const todayBookings = bookings.filter(b => {
         const bookingDate = new Date(b.date)
         const today = new Date()
@@ -228,6 +227,9 @@ function TechnicianDashboardContent() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {/* Technician Onboarding */}
+            <TechnicianOnboarding className="mb-6" />
+
             {/* Header */}
             <div className="mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -276,7 +278,7 @@ function TechnicianDashboardContent() {
                         <Card className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Today's Jobs</p>
+                                    <p className="text-sm font-medium text-gray-600">Today&apos;s Jobs</p>
                                     <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>
                                         {todayBookings.length}
                                     </p>
@@ -343,7 +345,7 @@ function TechnicianDashboardContent() {
                                 <div className="text-center py-8">
                                     <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
-                                    <p className="text-gray-600">You're all caught up! New requests will appear here.</p>
+                                    <p className="text-gray-600">You&apos;re all caught up! New requests will appear here.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -351,12 +353,11 @@ function TechnicianDashboardContent() {
                                         <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start space-x-4">
-                                                    <Avatar className="h-12 w-12">
-                                                        <AvatarImage src={booking.customer.image} />
-                                                        <AvatarFallback>
-                                                            {booking.customer.name.split(' ').map(n => n[0]).join('')}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                                    <SafeAvatar 
+                                                        src={booking.customer.image} 
+                                                        alt={booking.customer.name}
+                                                        size="lg"
+                                                    />
 
                                                     <div className="flex-1">
                                                         <div className="flex items-center space-x-2 mb-1">
@@ -459,10 +460,12 @@ function TechnicianDashboardContent() {
                             <div className="text-center">
                                 {technicianProfile && (
                                     <>
-                                        <Avatar className="h-16 w-16 mx-auto mb-3">
-                                            <AvatarImage src={technicianProfile.avatar} />
-                                            <AvatarFallback>{technicianProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                        </Avatar>
+                                        <SafeAvatar 
+                                            src={technicianProfile.avatar} 
+                                            alt={technicianProfile.name}
+                                            size="xl"
+                                            className="mx-auto mb-3"
+                                        />
 
                                         <h3 className="font-semibold text-gray-900 mb-1">{technicianProfile.name}</h3>
                                         <p className="text-sm text-gray-600 mb-2">{technicianProfile.specialization}</p>
@@ -512,8 +515,10 @@ function TechnicianDashboardContent() {
 
 export default function TechnicianDashboardPage() {
     return (
-        <DashboardLayout userType="technician">
-            <TechnicianDashboardContent />
-        </DashboardLayout>
+        <TechnicianRoute>
+            <DashboardLayout userType="technician">
+                <TechnicianDashboardContent />
+            </DashboardLayout>
+        </TechnicianRoute>
     )
 } 

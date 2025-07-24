@@ -41,7 +41,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   
   // Get authentication state
-  const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
+  const { profile, loading: authLoading } = useSupabaseAuth()
 
   const handleEmergencyCall = () => {
     window.open(`tel:${EMERGENCY_NUMBER}`)

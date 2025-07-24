@@ -20,7 +20,13 @@
       "Bash(taskkill:*)",
       "Bash(cmd /c:*)",
       "Bash(npx next dev:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(touch:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

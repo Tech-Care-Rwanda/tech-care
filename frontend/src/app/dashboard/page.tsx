@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { supabaseService, testSupabaseConnection } from '@/lib/supabase'
+import { CustomerRoute } from '@/components/auth/ProtectedRoute'
+import { testSupabaseConnection } from '@/lib/supabase'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { SafeAvatar } from '@/components/ui/safe-avatar'
 import {
   Clock,
   MapPin,
@@ -14,17 +15,14 @@ import {
   Phone,
   MessageCircle,
   Calendar,
-  Filter,
   Plus,
   ArrowRight,
   User
 } from 'lucide-react'
 import Link from 'next/link'
+import { CustomerOnboarding } from '@/components/onboarding/CustomerOnboarding'
 
 const EMERGENCY_NUMBER = "+250791995143"
-
-// Use the database interfaces from supabase.ts
-import type { Booking as DatabaseBooking, User, TechnicianDetails } from '@/lib/supabase'
 
 interface DisplayBooking {
   id: string
@@ -50,18 +48,18 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800' }
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const [bookings, setBookings] = useState<DisplayBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Get authentication state
-  const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
+  const { profile, loading: authLoading } = useSupabaseAuth()
   
   // User data from authentication context
   const [user, setUser] = useState({
     name: profile?.full_name || "User",
-    avatar: profile?.avatar_url || "/images/default-avatar.jpg",
+    avatar: profile?.avatar_url,
     totalBookings: 0,
     memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01"
   })
@@ -108,19 +106,19 @@ export default function DashboardPage() {
         const databaseBookings = result.bookings
 
         // Transform database bookings to display format
-        const displayBookings: DisplayBooking[] = databaseBookings.map((booking: any) => ({
-          id: booking.id,
+        const displayBookings: DisplayBooking[] = databaseBookings.map((booking: Record<string, unknown>) => ({
+          id: String(booking.id),
           technician: {
-            id: booking.technician_id || 'unknown',
+            id: String(booking.technician_id) || 'unknown',
             name: 'Technician', // Simplified for now since we don't have joined data
             avatar: undefined,
             rating: 4.8, // Default rating
-            specialization: booking.service_type || 'Technical Service'
+            specialization: String(booking.service_type) || 'Technical Service'
           },
-          serviceType: booking.service_type || 'Service',
-          status: booking.status.toLowerCase() as any,
-          createdAt: booking.created_at,
-          scheduledDate: booking.scheduled_date || undefined,
+          serviceType: String(booking.service_type) || 'Service',
+          status: String(booking.status).toLowerCase() as DisplayBooking['status'],
+          createdAt: String(booking.created_at),
+          scheduledDate: booking.scheduled_date ? String(booking.scheduled_date) : undefined,
           urgency: 'standard'
         }))
 
@@ -128,7 +126,7 @@ export default function DashboardPage() {
         setUser(prev => ({ 
           ...prev, 
           name: profile?.full_name || "User",
-          avatar: profile?.avatar_url || "/images/default-avatar.jpg",
+          avatar: profile?.avatar_url,
           memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01",
           totalBookings: displayBookings.length 
         }))
@@ -159,6 +157,9 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Customer Onboarding */}
+      <CustomerOnboarding className="mb-6" />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -223,12 +224,11 @@ export default function DashboardPage() {
                   <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={booking.technician.avatar} />
-                          <AvatarFallback>
-                            {booking.technician.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
+                        <SafeAvatar 
+                          src={booking.technician.avatar} 
+                          alt={booking.technician.name}
+                          size="lg"
+                        />
 
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
@@ -304,12 +304,11 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {recentBookings.map((booking) => (
                   <div key={booking.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={booking.technician.avatar} />
-                      <AvatarFallback>
-                        {booking.technician.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
+                    <SafeAvatar 
+                      src={booking.technician.avatar} 
+                      alt={booking.technician.name}
+                      size="md"
+                    />
 
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{booking.technician.name}</p>
@@ -334,10 +333,12 @@ export default function DashboardPage() {
           {/* Profile Summary */}
           <Card className="p-4">
             <div className="text-center">
-              <Avatar className="h-16 w-16 mx-auto mb-3">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-              </Avatar>
+              <SafeAvatar 
+                src={user.avatar} 
+                alt={user.name}
+                size="xl"
+                className="mx-auto mb-3"
+              />
 
               <h3 className="font-semibold text-gray-900 mb-1">{user.name}</h3>
               <p className="text-sm text-gray-600 mb-4">Member since {user.memberSince}</p>
@@ -387,5 +388,13 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <CustomerRoute>
+      <DashboardPageContent />
+    </CustomerRoute>
   )
 }

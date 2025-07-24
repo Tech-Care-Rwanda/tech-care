@@ -5,12 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { SafeAvatar } from '@/components/ui/safe-avatar'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import {
   Menu,
   X,
-  Phone,
   Home,
   Calendar,
   User,
@@ -21,7 +20,6 @@ import {
   ChevronDown
 } from 'lucide-react'
 
-const EMERGENCY_NUMBER = "+250791995143"
 
 interface NavigationBarProps {
   className?: string
@@ -34,22 +32,18 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
   const profileDropdownRef = useRef<HTMLDivElement>(null)
   
   // Get authentication state
-  const { user: authUser, profile, signOut, loading } = useSupabaseAuth()
+  const { profile, signOut, loading } = useSupabaseAuth()
 
   // Use actual user data from authentication context
   const user = profile ? {
     name: profile.full_name || 'User',
-    avatar: profile.avatar_url || "/images/default-avatar.jpg",
+    avatar: profile.avatar_url,
     initials: profile.full_name?.split(' ').map(n => n[0]).join('') || 'U',
     email: profile.email
   } : null
 
   // Mock pending bookings count - in real app, get from API
   const pendingBookingsCount = 2
-
-  const handleCall = () => {
-    window.open(`tel:${EMERGENCY_NUMBER}`)
-  }
 
   const handleMobileMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -87,10 +81,39 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
     return pathname === path
   }
 
-  const navigationItems = [
-    { href: '/', label: 'Find Technicians', icon: Home },
-    { href: '/dashboard', label: 'My Bookings', icon: Calendar, badge: pendingBookingsCount }
-  ]
+  // Role-based navigation items
+  const getNavigationItems = () => {
+    const baseItems = [
+      { href: '/', label: 'Find Technicians', icon: Home }
+    ]
+
+    if (!profile) return baseItems
+
+    // Add role-specific items
+    switch (profile.role) {
+      case 'CUSTOMER':
+        return [
+          ...baseItems,
+          { href: '/dashboard', label: 'My Bookings', icon: Calendar, badge: pendingBookingsCount }
+        ]
+      case 'TECHNICIAN':
+        return [
+          ...baseItems,
+          { href: '/technician/dashboard', label: 'My Jobs', icon: Calendar, badge: pendingBookingsCount },
+          { href: '/dashboard', label: 'Find Jobs', icon: Search }
+        ]
+      case 'ADMIN':
+        return [
+          ...baseItems,
+          { href: '/admin/dashboard', label: 'Admin Panel', icon: Settings, badge: pendingBookingsCount },
+          { href: '/dashboard', label: 'Overview', icon: Calendar }
+        ]
+      default:
+        return baseItems
+    }
+  }
+
+  const navigationItems = getNavigationItems()
 
   return (
     <>
@@ -148,7 +171,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                   type="text"
                   placeholder="Search technicians..."
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 text-sm"
-                  style={{ '--tw-ring-color': '#FF385C' } as any}
+                  style={{ '--tw-ring-color': '#FF385C' } as React.CSSProperties}
                   onFocus={(e) => e.target.style.borderColor = '#FF385C'}
                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                 />
@@ -165,10 +188,12 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                   onClick={toggleProfileDropdown}
                   className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
                 >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.initials}</AvatarFallback>
-                  </Avatar>
+                  <SafeAvatar 
+                    src={user.avatar} 
+                    alt={user.name}
+                    fallback={user.initials}
+                    size="sm"
+                  />
                   <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isProfileDropdownOpen ? 'transform rotate-180' : ''}`} />
                 </button>
 
@@ -178,6 +203,19 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900">{user.name}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
+                      {profile && (
+                        <div className="mt-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            profile.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                            profile.role === 'TECHNICIAN' ? 'bg-green-100 text-green-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {profile.role === 'CUSTOMER' ? '👤 Customer' :
+                             profile.role === 'TECHNICIAN' ? '🔧 Technician' : 
+                             '👑 Admin'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <Link
@@ -267,7 +305,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                   type="text"
                   placeholder="Search technicians..."
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 text-sm"
-                  style={{ '--tw-ring-color': '#FF385C' } as any}
+                  style={{ '--tw-ring-color': '#FF385C' } as React.CSSProperties}
                   onFocus={(e) => e.target.style.borderColor = '#FF385C'}
                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                 />

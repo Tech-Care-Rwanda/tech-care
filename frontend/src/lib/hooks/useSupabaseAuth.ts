@@ -139,15 +139,28 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             if (authError) throw authError
 
             if (authData.user) {
-                // Prepare user profile data
+                // Validate required fields
+                if (!userData.fullName?.trim()) {
+                    throw new Error('Full name is required')
+                }
+                if (!userData.phoneNumber?.trim()) {
+                    throw new Error('Phone number is required')
+                }
+                if (!email?.trim()) {
+                    throw new Error('Email is required')
+                }
+
+                // Prepare user profile data with current timestamp
+                const now = new Date().toISOString()
                 const profileData = {
-                    id: authData.user.id, // Use Supabase auth UUID as primary key
                     supabase_user_id: authData.user.id,
-                    email: email,
-                    full_name: userData.fullName,
-                    phone_number: userData.phoneNumber,
+                    email: email.toLowerCase().trim(),
+                    full_name: userData.fullName.trim(),
+                    phone_number: userData.phoneNumber.trim(),
                     role: userData.role || 'CUSTOMER',
-                    is_active: true
+                    is_active: true,
+                    created_at: now,
+                    updated_at: now
                 }
 
                 console.log('Attempting to insert profile data:', profileData)
@@ -164,17 +177,21 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                 }
 
                 // Create user profile in database
-                const { error: profileError } = await supabase
+                const { data: insertedProfile, error: profileError } = await supabase
                     .from('users')
                     .insert(profileData)
+                    .select()
+                    .single()
 
                 if (profileError) {
-                    console.error('Profile creation error details:', {
+                    console.error('Profile creation error details:', profileError)
+                    console.error('Additional error context:', {
                         message: profileError.message,
                         details: profileError.details,
                         hint: profileError.hint,
                         code: profileError.code,
-                        profileData: profileData
+                        profileData: profileData,
+                        fullError: JSON.stringify(profileError, null, 2)
                     })
 
                     // Try to clean up auth user if profile creation fails
@@ -185,32 +202,46 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                         console.error('Cleanup error:', cleanupError)
                     }
 
-                    throw new Error(`Profile creation failed: ${profileError.message}. Check console for details.`)
+                    // Provide more specific error messages based on error codes
+                    let userFriendlyMessage = 'Profile creation failed. '
+                    
+                    if (profileError.code === '23505') {
+                        userFriendlyMessage += 'An account with this email already exists.'
+                    } else if (profileError.code === '23502') {
+                        userFriendlyMessage += 'Missing required information.'
+                    } else if (profileError.code === '42501') {
+                        userFriendlyMessage += 'Database permission error. Please contact support.'
+                    } else {
+                        userFriendlyMessage += `${profileError.message}. Check console for details.`
+                    }
+                    
+                    throw new Error(userFriendlyMessage)
                 }
 
                 console.log('Profile created successfully for user:', authData.user.id)
 
                 // Create technician details if role is TECHNICIAN
-                if (userData.role === 'TECHNICIAN' && userData.specialization) {
-                    const userProfile = await supabase
-                        .from('users')
-                        .select('id')
-                        .eq('supabase_user_id', authData.user.id)
-                        .single()
+                if (userData.role === 'TECHNICIAN' && userData.specialization && insertedProfile) {
+                    console.log('Creating technician details for user ID:', insertedProfile.id)
+                    
+                    const { error: techError } = await supabase
+                        .from('technician_details')
+                        .insert({
+                            user_id: insertedProfile.id,
+                            gender: userData.gender || '',
+                            age: userData.age || 0,
+                            date_of_birth: userData.dateOfBirth || new Date().toISOString(),
+                            experience: userData.experience || '',
+                            specialization: userData.specialization,
+                            certificate_url: '', // Will be updated later
+                            approval_status: 'PENDING',
+                        })
 
-                    if (userProfile.data) {
-                        await supabase
-                            .from('technician_details')
-                            .insert({
-                                user_id: userProfile.data.id,
-                                gender: userData.gender || '',
-                                age: userData.age || 0,
-                                date_of_birth: userData.dateOfBirth || new Date().toISOString(),
-                                experience: userData.experience || '',
-                                specialization: userData.specialization,
-                                certificate_url: '', // Will be updated later
-                                approval_status: 'PENDING',
-                            })
+                    if (techError) {
+                        console.error('Technician details creation error:', techError)
+                        // Don't fail the entire signup for this, but log it
+                    } else {
+                        console.log('Technician details created successfully')
                     }
                 }
 
