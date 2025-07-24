@@ -19,7 +19,6 @@ import {
     CreditCard
 } from 'lucide-react'
 import { supabaseService, TechnicianDetails } from '@/lib/supabase'
-import { bookingService } from '@/lib/services/bookingService'
 import Link from 'next/link'
 
 interface BookingFormData {
@@ -74,18 +73,30 @@ export default function BookTechnicianPage() {
 
                 // Fetch technician details using Supabase service
                 console.log('Calling supabaseService.getTechnicianById with ID:', technicianId)
-                const technicianData = await supabaseService.getTechnicianById(parseInt(technicianId))
+                const technicianData = await supabaseService.getTechnicianById(technicianId)
 
                 console.log('Received technician data:', technicianData)
                 setTechnician(technicianData)
 
             } catch (error) {
-                console.error('Error fetching technician data:', {
-                    message: error instanceof Error ? error.message : 'Unknown error',
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                const errorDetails = {
+                    message: errorMessage,
                     stack: error instanceof Error ? error.stack : undefined,
-                    error: error
+                    error: error,
+                    errorType: typeof error,
+                    errorString: String(error),
+                    errorJSON: JSON.stringify(error, null, 2)
+                }
+
+                console.error('Error fetching technician data:', errorDetails)
+                console.log('Technician ID being fetched:', technicianId)
+                console.log('Environment check:', {
+                    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
                 })
-                setError(`Failed to load technician information: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+                setError(`Failed to load technician information: ${errorMessage}`)
             } finally {
                 setLoading(false)
             }
@@ -98,9 +109,15 @@ export default function BookTechnicianPage() {
 
     // Get available service options based on technician specialization
     const getServiceOptions = () => {
-        if (!technician) return []
+        console.log('getServiceOptions called, technician:', technician)
+        
+        if (!technician) {
+            console.log('No technician data, returning empty array')
+            return []
+        }
 
         const specialty = technician.specialization || 'Technical Service'
+        console.log('Technician specialty:', specialty)
 
         const baseServices = [
             { id: 1, name: 'Basic Service', description: 'Standard service call', price: '5000' },
@@ -108,11 +125,14 @@ export default function BookTechnicianPage() {
             { id: 3, name: 'Emergency Service', description: 'Urgent technical support', price: '12000' }
         ]
 
-        return baseServices.map(service => ({
+        const services = baseServices.map(service => ({
             ...service,
             name: `${specialty} - ${service.name}`,
             description: `${service.description} for ${specialty.toLowerCase()}`
         }))
+        
+        console.log('Generated services:', services)
+        return services
     }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -125,7 +145,7 @@ export default function BookTechnicianPage() {
     }
 
     const validateForm = (): boolean => {
-        if (!formData.serviceId) {
+        if (!formData.serviceId || Number(formData.serviceId) === 0) {
             setError('Please select a service')
             return false
         }
@@ -180,37 +200,63 @@ export default function BookTechnicianPage() {
             setSubmitting(true)
             setError(null)
 
-            // Create booking data
-            const selectedService = getServiceOptions().find(s => s.id === formData.serviceId)
+            // Get selected service details
+            const serviceOptions = getServiceOptions()
+            console.log('Available service options:', serviceOptions)
+            console.log('Selected service ID:', formData.serviceId)
+            
+            const selectedService = serviceOptions.find(s => s.id === Number(formData.serviceId))
+            console.log('Found selected service:', selectedService)
+            
+            if (!selectedService) {
+                console.error('Service selection failed:', {
+                    serviceId: formData.serviceId,
+                    availableServices: serviceOptions,
+                    technician: technician
+                })
+                throw new Error(`Please select a valid service. Available services: ${serviceOptions.map(s => `${s.id}: ${s.name}`).join(', ')}`)
+            }
 
+            // Create booking data using the clean service
             const bookingData = {
-                technicianId: technicianId,
-                service: selectedService?.name || 'Technical Service',
-                description: formData.customerNotes.trim() || 'Service request',
-                date: formData.scheduledDate,
-                time: formData.scheduledTime,
-                location: formData.customerAddress,
-                urgency: formData.urgency,
-                deviceCount: 1 // Default for now
+                customer_id: "550e8400-e29b-41d4-a716-446655440011", // Test Customer UUID
+                technician_id: technician?.user_id || technician?.id || technicianId, // Use user_id if FK points to users table
+                service_id: Number(formData.serviceId),
+                service_type: selectedService.name,
+                problem_description: formData.customerNotes.trim() || selectedService.description,
+                customer_location: formData.customerAddress.trim(),
+                price_rwf: selectedService.price,
+                duration: formData.duration,
+                scheduled_date: `${formData.scheduledDate}T${formData.scheduledTime}:00`,
+                customer_notes: formData.customerNotes.trim() || null
             }
 
-            console.log('Creating booking:', bookingData)
+            console.log('Creating booking with clean service:', bookingData)
 
-            // Save booking using the booking service
-            const response = await bookingService.createBooking(bookingData)
+            // Create booking via API endpoint
+            const response = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(bookingData)
+            })
 
-            if (!response.success || !response.data) {
-                throw new Error(response.error || 'Failed to create booking')
+            const result = await response.json()
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to create booking')
             }
 
-            console.log('Booking created successfully:', response.data)
+            console.log('✅ Booking created successfully:', result.booking)
 
             // Redirect to confirmation page
-            router.push(`/book/confirmation?bookingId=${response.data.id}`)
+            router.push(`/book/confirmation?bookingId=${result.booking.id}`)
 
         } catch (error) {
             console.error('Error creating booking:', error)
-            setError('Failed to create booking. Please try again.')
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create booking'
+            setError(errorMessage)
         } finally {
             setSubmitting(false)
         }

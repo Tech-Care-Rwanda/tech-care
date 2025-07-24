@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { supabaseService } from '@/lib/supabase'
+import { supabaseService, testSupabaseConnection } from '@/lib/supabase'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -77,25 +77,42 @@ export default function DashboardPage() {
         setLoading(true)
         setError(null)
 
-        // For now, assume customer ID = 1 (will be replaced with auth)
-        const customerId = 1
-        const databaseBookings = await supabaseService.getBookingsByCustomer(customerId)
+        // Test Supabase connection first
+        const connectionTest = await testSupabaseConnection()
+        console.log('Dashboard connection test:', connectionTest)
+        
+        if (!connectionTest.success) {
+          throw new Error(`Supabase connection failed: ${connectionTest.error}`)
+        }
+
+        // For now, assume customer ID (will be replaced with auth)
+        const customerId = "550e8400-e29b-41d4-a716-446655440011" // Test Customer UUID
+        
+        // Fetch bookings via API
+        const response = await fetch(`/api/bookings/customer/${customerId}`)
+        const result = await response.json()
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to fetch bookings')
+        }
+        
+        const databaseBookings = result.bookings
 
         // Transform database bookings to display format
-        const displayBookings: DisplayBooking[] = databaseBookings.map(booking => ({
-          id: booking.id.toString(),
+        const displayBookings: DisplayBooking[] = databaseBookings.map((booking: any) => ({
+          id: booking.id,
           technician: {
-            id: booking.technician?.id?.toString() || 'unknown',
-            name: booking.technician?.user?.full_name || booking.technician?.specialization || 'Unknown Technician',
-            avatar: booking.technician?.image_url,
-            rating: booking.technician?.rate ? booking.technician.rate / 10 : 0,
-            specialization: booking.technician?.specialization || 'General'
+            id: booking.technician_id || 'unknown',
+            name: 'Technician', // Simplified for now since we don't have joined data
+            avatar: undefined,
+            rating: 4.8, // Default rating
+            specialization: booking.service_type || 'Technical Service'
           },
-          serviceType: booking.service?.serviceName || 'Service',
+          serviceType: booking.service_type || 'Service',
           status: booking.status.toLowerCase() as any,
           createdAt: booking.created_at,
           scheduledDate: booking.scheduled_date || undefined,
-          urgency: 'standard' // Default to standard, urgency logic would need to be added to database
+          urgency: 'standard'
         }))
 
         setBookings(displayBookings)
@@ -152,19 +169,7 @@ export default function DashboardPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">Active Bookings</h2>
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">{activeBookings.length}</Badge>
-                <Link href="/">
-                  <Button
-                    size="sm"
-                    className="text-white hover:opacity-90"
-                    style={{ backgroundColor: '#FF385C' }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Book New Service
-                  </Button>
-                </Link>
-              </div>
+              <Badge variant="secondary">{activeBookings.length}</Badge>
             </div>
 
             {loading ? (

@@ -50,9 +50,10 @@ export function useSupabaseAuth(): AuthState & AuthActions {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session)
             setUser(session?.user ?? null)
-            if (session?.user) {
+            if (session?.user && !session.user.is_anonymous) {
                 fetchUserProfile(session.user.id)
             } else {
+                setProfile(null)
                 setLoading(false)
             }
         })
@@ -64,7 +65,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             setSession(session)
             setUser(session?.user ?? null)
 
-            if (session?.user) {
+            if (session?.user && !session.user.is_anonymous) {
                 await fetchUserProfile(session.user.id)
             } else {
                 setProfile(null)
@@ -86,8 +87,14 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                 .single()
 
             if (error) {
-                console.error('Error fetching profile:', error)
-                setError('Failed to fetch user profile')
+                // Only log actual errors, not missing profiles for anonymous users
+                if (error.code !== 'PGRST116') {
+                    console.error('Error fetching profile:', error)
+                    setError('Failed to fetch user profile')
+                } else {
+                    // Profile doesn't exist - this is normal for anonymous users
+                    setProfile(null)
+                }
             } else {
                 setProfile(data)
             }

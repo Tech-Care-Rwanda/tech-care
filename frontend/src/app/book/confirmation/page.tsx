@@ -41,14 +41,22 @@ export default function BookingConfirmationPage() {
                 setLoading(true)
                 console.log('Fetching booking:', bookingId)
 
-                // Fetch actual booking from database
-                const bookingData = await supabaseService.getBookingById(parseInt(bookingId))
-                setBooking(bookingData)
+                // Fetch booking via API endpoint
+                const response = await fetch(`/api/bookings/${bookingId}`)
+                const result = await response.json()
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Failed to fetch booking')
+                }
+
+                console.log('✅ Booking fetched via API:', result.booking)
+                setBooking(result.booking)
                 setLoading(false)
 
             } catch (error) {
                 console.error('Error fetching booking:', error)
-                setError('Failed to load booking details')
+                const errorMessage = error instanceof Error ? error.message : 'Failed to load booking details'
+                setError(errorMessage)
                 setLoading(false)
             }
         }

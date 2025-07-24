@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, MapPin, Clock, Phone, Navigation } from 'lucide-react'
-import { supabaseService, TechnicianDetails } from '@/lib/supabase'
+import { supabaseService, TechnicianDetails, testSupabaseConnection } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface TechnicianWithDistance {
@@ -84,6 +84,14 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
     setError(null)
 
     try {
+      // Test connection first
+      const connectionTest = await testSupabaseConnection()
+      console.log('Map connection test:', connectionTest)
+      
+      if (!connectionTest.success) {
+        throw new Error(`Supabase connection failed: ${connectionTest.error}`)
+      }
+
       const techniciansData = await supabaseService.getTechnicians(true) // Get available technicians
 
       console.log('Raw technician data from Supabase:', techniciansData) // Debug log
@@ -118,7 +126,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
           console.log('Technician:', tech.id, 'User data:', tech.user)
 
           return {
-            id: tech.id.toString(),
+            id: tech.id, // Keep as UUID string, don't convert to string
             name: tech.user?.full_name || tech.specialization || 'Technician',
             avatar: tech.image_url,
             rating: tech.rate / 10, // Convert rate to 5-star scale
