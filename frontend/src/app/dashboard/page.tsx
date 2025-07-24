@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabaseService, testSupabaseConnection } from '@/lib/supabase'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,12 +55,15 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // User data - will be replaced with auth context later
+  // Get authentication state
+  const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
+  
+  // User data from authentication context
   const [user, setUser] = useState({
-    name: "John Uwimana",
-    avatar: "/images/default-avatar.jpg",
+    name: profile?.full_name || "User",
+    avatar: profile?.avatar_url || "/images/default-avatar.jpg",
     totalBookings: 0,
-    memberSince: "2024-01"
+    memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01"
   })
 
   const handleCall = (phoneNumber?: string) => {
@@ -72,6 +76,8 @@ export default function DashboardPage() {
 
   // Load real bookings from database
   useEffect(() => {
+    if (!profile || authLoading) return // Wait for authentication to complete
+    
     const loadBookings = async () => {
       try {
         setLoading(true)
@@ -85,8 +91,11 @@ export default function DashboardPage() {
           throw new Error(`Supabase connection failed: ${connectionTest.error}`)
         }
 
-        // For now, assume customer ID (will be replaced with auth)
-        const customerId = "550e8400-e29b-41d4-a716-446655440011" // Test Customer UUID
+        // Use authenticated user's ID
+        if (!profile?.id) {
+          throw new Error('User not authenticated')
+        }
+        const customerId = profile.id
         
         // Fetch bookings via API
         const response = await fetch(`/api/bookings/customer/${customerId}`)
@@ -116,7 +125,13 @@ export default function DashboardPage() {
         }))
 
         setBookings(displayBookings)
-        setUser(prev => ({ ...prev, totalBookings: displayBookings.length }))
+        setUser(prev => ({ 
+          ...prev, 
+          name: profile?.full_name || "User",
+          avatar: profile?.avatar_url || "/images/default-avatar.jpg",
+          memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01",
+          totalBookings: displayBookings.length 
+        }))
       } catch (err) {
         console.error('Error loading bookings:', err)
         setError('Failed to load bookings')
@@ -127,7 +142,7 @@ export default function DashboardPage() {
     }
 
     loadBookings()
-  }, [])
+  }, [profile, authLoading])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

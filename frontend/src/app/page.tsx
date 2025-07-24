@@ -5,8 +5,10 @@ import { TechnicianMap } from "@/components/maps/TechnicianMap"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Clock, Star, Users, Phone, X } from 'lucide-react'
+import { MapPin, Clock, Star, Users, Phone, X, UserPlus, LogIn, ArrowRight } from 'lucide-react'
 import { supabaseService, TechnicianDetails } from '@/lib/supabase'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import Link from 'next/link'
 
 const EMERGENCY_NUMBER = "+250791995143"
 
@@ -37,6 +39,9 @@ export default function Home() {
   const [technicians, setTechnicians] = useState<TechnicianDetails[]>([])
   const [filteredTechnicians, setFilteredTechnicians] = useState<TechnicianDetails[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Get authentication state
+  const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
 
   const handleEmergencyCall = () => {
     window.open(`tel:${EMERGENCY_NUMBER}`)
@@ -129,19 +134,78 @@ export default function Home() {
     setSelectedFilter(null)
   }
 
+  // Authentication-aware hero content
+  const getHeroContent = () => {
+    if (authLoading) {
+      return {
+        title: "Loading...",
+        subtitle: "Please wait while we load your experience",
+        showAuthButtons: false
+      }
+    }
+
+    if (profile) {
+      // Authenticated user experience
+      return {
+        title: `Welcome back, ${profile.full_name?.split(' ')[0] || 'User'}`,
+        subtitle: "Ready to book another service? Find verified tech experts in Kigali, Rwanda.",
+        showAuthButtons: false,
+        showDashboardLink: true
+      }
+    }
+
+    // Anonymous user experience
+    return {
+      title: "Find a technician near you",
+      subtitle: "Connect with verified tech experts in Kigali, Rwanda. Get instant support for computers, mobile devices, and networks.",
+      showAuthButtons: true
+    }
+  }
+
+  const heroContent = getHeroContent()
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Hero Section with Authentication Logic */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div className="mb-4 lg:mb-0">
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                Find a technician near you
+                {heroContent.title}
               </h1>
               <p className="text-gray-600">
-                Connect with verified tech experts in Kigali, Rwanda. Get instant support for computers, mobile devices, and networks.
+                {heroContent.subtitle}
               </p>
             </div>
+            
+            {/* Authentication Action Buttons for Anonymous Users */}
+            {heroContent.showAuthButtons && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
+                  <Link href="/signup">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Get Started
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-gray-300 hover:bg-gray-50">
+                  <Link href="/login">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Link>
+                </Button>
+              </div>
+            )}
+            
+            {/* Dashboard Link for Authenticated Users */}
+            {heroContent.showDashboardLink && (
+              <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
+                <Link href="/dashboard">
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  View My Bookings
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -179,6 +243,32 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
+            {/* Sign Up Prompt Banner for Anonymous Users */}
+            {!authLoading && !profile && (
+              <Card className="p-4 bg-gradient-to-r from-red-50 to-pink-50 border-red-200">
+                <div className="text-center">
+                  <UserPlus className="w-8 h-8 mx-auto mb-2 text-red-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Join TechCare Today</h3>
+                  <p className="text-sm text-gray-700 mb-4">
+                    Create your account to book services, track appointments, and get personalized support.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
+                      <Link href="/signup">
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Sign Up Free
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="text-gray-600 hover:bg-gray-50">
+                      <Link href="/login">
+                        Already have an account? Sign in
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Stats</h3>
               <div className="space-y-3">
@@ -247,26 +337,42 @@ export default function Home() {
                         </Badge>
                       </div>
 
-                      {/* Book Now Button */}
-                      <Button
-                        size="sm"
-                        className="w-full text-white hover:opacity-90"
-                        style={{ backgroundColor: '#FF385C' }}
-                        onClick={() => {
-                          // Filter first to show only relevant technicians
-                          handleServiceClick(category.id)
-                          // Scroll to map to show filtered results
-                          setTimeout(() => {
-                            const mapElement = document.querySelector('[class*="TechnicianMap"]')
-                            if (mapElement) {
-                              mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                            }
-                          }, 100)
-                        }}
-                        disabled={count === 0}
-                      >
-                        {count === 0 ? 'No Technicians Available' : `Find ${category.name.replace(/💻|📱|🌐/g, '').trim()} Technicians`}
-                      </Button>
+                      {/* Book Now Button - Different behavior for anonymous vs authenticated users */}
+                      {profile ? (
+                        // Authenticated user - show technicians directly
+                        <Button
+                          size="sm"
+                          className="w-full text-white hover:opacity-90"
+                          style={{ backgroundColor: '#FF385C' }}
+                          onClick={() => {
+                            // Filter first to show only relevant technicians
+                            handleServiceClick(category.id)
+                            // Scroll to map to show filtered results
+                            setTimeout(() => {
+                              const mapElement = document.querySelector('[class*="TechnicianMap"]')
+                              if (mapElement) {
+                                mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              }
+                            }, 100)
+                          }}
+                          disabled={count === 0}
+                        >
+                          {count === 0 ? 'No Technicians Available' : `Find ${category.name.replace(/💻|📱|🌐/g, '').trim()} Technicians`}
+                        </Button>
+                      ) : (
+                        // Anonymous user - prompt to sign up
+                        <Button
+                          size="sm"
+                          className="w-full text-white hover:opacity-90"
+                          style={{ backgroundColor: '#FF385C' }}
+                          asChild
+                          disabled={count === 0}
+                        >
+                          <Link href="/signup">
+                            {count === 0 ? 'No Technicians Available' : `Book ${category.name.replace(/💻|📱|🌐/g, '').trim()} Service`}
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   )
                 })}

@@ -1,6 +1,6 @@
 /**
- * TypeScript interfaces for TechCare Backend API Responses
- * Based on Node.js/Express backend with Prisma ORM
+ * TypeScript interfaces for TechCare API Responses
+ * Based on Supabase backend
  */
 
 // Base API Response Structure

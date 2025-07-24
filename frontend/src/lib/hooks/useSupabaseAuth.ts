@@ -82,16 +82,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             setError(null)
             console.log('Fetching profile for user ID:', supabaseUserId)
 
-            // First, try to see if ANY users exist with this email as a sanity check
-            const { data: emailCheck } = await supabase
-                .from('users')
-                .select('supabase_user_id, email, full_name')
-                .eq('email', 'customer1@gmail.com')
-                .maybeSingle()
-
-            console.log('Email check result:', emailCheck)
-
-            // Now try the main query
+            // Fetch the user profile based on supabase_user_id
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
@@ -150,6 +141,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
             if (authData.user) {
                 // Prepare user profile data
                 const profileData = {
+                    id: authData.user.id, // Use Supabase auth UUID as primary key
                     supabase_user_id: authData.user.id,
                     email: email,
                     full_name: userData.fullName,

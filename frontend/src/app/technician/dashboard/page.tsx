@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import {
     Clock,
     MapPin,
@@ -72,34 +73,36 @@ const URGENCY_CONFIG = {
 
 function TechnicianDashboardContent() {
     const { bookings, loading, error, fetchBookings, updateBookingStatus } = useTechnicianBookings()
-    const { profile, updateAvailability } = useTechnicianProfile()
+    const { profile: techProfile, updateAvailability } = useTechnicianProfile()
+    const { user: authUser, profile, loading: authLoading } = useSupabaseAuth()
     const [isAvailable, setIsAvailable] = useState(true)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [updatingAvailability, setUpdatingAvailability] = useState(false)
 
-    // For demo purposes, use John Uwimana's technician user_id
-    // In production, this would come from authentication context
-    const DEMO_TECHNICIAN_ID = '550e8400-e29b-41d4-a716-446655440001' // John Uwimana
-
     // Load bookings for this technician on mount
     useEffect(() => {
-        fetchBookings(DEMO_TECHNICIAN_ID)
-    }, [])
+        if (!profile || authLoading) return // Wait for authentication to complete
+        if (profile.role !== 'TECHNICIAN') {
+            console.error('User is not a technician')
+            return
+        }
+        fetchBookings(profile.id)
+    }, [profile, authLoading])
 
-    // Mock technician profile data - will be replaced with auth context
-    const technicianProfile = {
-        id: DEMO_TECHNICIAN_ID,
-        name: 'John Uwimana', // Updated to match our demo technician
-        avatar: '/images/thisisengineering-hnXf73-K1zo-unsplash.jpg',
-        specialization: 'Computer Repair Specialist', // Updated to match database
-        rating: 4.8,
-        totalJobs: 142,
-        monthlyEarnings: 85000,
-        joinDate: '2023-06',
-        phone: '+250 781 234 567', // Updated to match database
-        location: 'Kigali, Rwanda',
-        certifications: ['CompTIA A+', 'Network+', 'Microsoft Certified']
-    }
+    // Use actual technician profile data from authentication context
+    const technicianProfile = profile ? {
+        id: profile.id,
+        name: profile.full_name || 'Technician',
+        avatar: profile.avatar_url || '/images/default-avatar.jpg',
+        specialization: 'Technical Service', // Could be expanded with technician_details
+        rating: 4.8, // TODO: Calculate from reviews
+        totalJobs: 142, // TODO: Calculate from bookings
+        monthlyEarnings: 85000, // TODO: Calculate from completed bookings
+        joinDate: profile.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : '2024-01',
+        phone: profile.phone_number || '',
+        location: 'Rwanda', // TODO: Add location to profile
+        certifications: [] // TODO: Add from technician_details
+    } : null
 
     const handleCall = (phoneNumber?: string) => {
         window.open(`tel:${phoneNumber || EMERGENCY_NUMBER}`)
@@ -114,7 +117,8 @@ function TechnicianDashboardContent() {
             setUpdatingAvailability(true)
             setIsAvailable(newAvailability) // Optimistic update for immediate UI feedback
             
-            const result = await updateAvailability(DEMO_TECHNICIAN_ID, newAvailability)
+            if (!profile) return
+            const result = await updateAvailability(profile.id, newAvailability)
             
             if (result.warning) {
                 console.warn('Availability update warning:', result.warning)
@@ -197,6 +201,31 @@ function TechnicianDashboardContent() {
         return bookingDate.toDateString() === today.toDateString()
     })
 
+    // Show loading state during authentication
+    if (authLoading || !profile) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderBottomColor: '#FF385C' }}></div>
+                    <p className="text-gray-600">Loading dashboard...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Show error if user is not a technician
+    if (profile.role !== 'TECHNICIAN') {
+        return (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="text-center py-12">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600">This dashboard is only available to technicians.</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {/* Header */}
@@ -217,7 +246,7 @@ function TechnicianDashboardContent() {
                         </div>
                         <Button
                             variant="outline"
-                            onClick={() => fetchBookings(DEMO_TECHNICIAN_ID)}
+                            onClick={() => profile && fetchBookings(profile.id)}
                             disabled={loading}
                         >
                             <Navigation className="w-4 h-4 mr-2" />
@@ -261,7 +290,7 @@ function TechnicianDashboardContent() {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
                                     <p className="text-lg font-bold" style={{ color: '#FF385C' }}>
-                                        {formatCurrency(technicianProfile.monthlyEarnings)}
+                                        {technicianProfile ? formatCurrency(technicianProfile.monthlyEarnings) : 'N/A'}
                                     </p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-gray-400" />
@@ -273,7 +302,7 @@ function TechnicianDashboardContent() {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Rating</p>
                                     <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>
-                                        {technicianProfile.rating}/5
+                                        {technicianProfile ? `${technicianProfile.rating}/5` : 'N/A'}
                                     </p>
                                 </div>
                                 <TrendingUp className="h-8 w-8 text-gray-400" />
@@ -303,7 +332,7 @@ function TechnicianDashboardContent() {
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading requests</h3>
                                     <p className="text-gray-600 mb-4">{error}</p>
                                     <Button
-                                        onClick={() => fetchBookings(DEMO_TECHNICIAN_ID)}
+                                        onClick={() => profile && fetchBookings(profile.id)}
                                         className="text-white hover:opacity-90"
                                         style={{ backgroundColor: '#FF385C' }}
                                     >
@@ -428,24 +457,28 @@ function TechnicianDashboardContent() {
                     <Card>
                         <CardContent className="p-4">
                             <div className="text-center">
-                                <Avatar className="h-16 w-16 mx-auto mb-3">
-                                    <AvatarImage src={technicianProfile.avatar} />
-                                    <AvatarFallback>{technicianProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                </Avatar>
+                                {technicianProfile && (
+                                    <>
+                                        <Avatar className="h-16 w-16 mx-auto mb-3">
+                                            <AvatarImage src={technicianProfile.avatar} />
+                                            <AvatarFallback>{technicianProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                        </Avatar>
 
-                                <h3 className="font-semibold text-gray-900 mb-1">{technicianProfile.name}</h3>
-                                <p className="text-sm text-gray-600 mb-2">{technicianProfile.specialization}</p>
+                                        <h3 className="font-semibold text-gray-900 mb-1">{technicianProfile.name}</h3>
+                                        <p className="text-sm text-gray-600 mb-2">{technicianProfile.specialization}</p>
 
-                                <div className="flex items-center justify-center space-x-1 mb-3">
-                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm font-medium">{technicianProfile.rating}</span>
-                                    <span className="text-sm text-gray-500">({technicianProfile.totalJobs} jobs)</span>
-                                </div>
+                                        <div className="flex items-center justify-center space-x-1 mb-3">
+                                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                            <span className="text-sm font-medium">{technicianProfile.rating}</span>
+                                            <span className="text-sm text-gray-500">({technicianProfile.totalJobs} jobs)</span>
+                                        </div>
 
-                                <div className="p-3 rounded-lg bg-red-50">
-                                    <p className="text-lg font-bold text-red-600">{formatCurrency(technicianProfile.monthlyEarnings)}</p>
-                                    <p className="text-sm text-red-700">This Month</p>
-                                </div>
+                                        <div className="p-3 rounded-lg bg-red-50">
+                                            <p className="text-lg font-bold text-red-600">{formatCurrency(technicianProfile.monthlyEarnings)}</p>
+                                            <p className="text-sm text-red-700">This Month</p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

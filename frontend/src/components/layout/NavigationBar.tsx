@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import {
   Menu,
   X,
@@ -31,13 +32,17 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const pathname = usePathname()
   const profileDropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Get authentication state
+  const { user: authUser, profile, signOut, loading } = useSupabaseAuth()
 
-  // Mock data - in real app, get from auth context
-  const user = {
-    name: "John Uwimana",
-    avatar: "/images/default-avatar.jpg",
-    initials: "JU"
-  }
+  // Use actual user data from authentication context
+  const user = profile ? {
+    name: profile.full_name || 'User',
+    avatar: profile.avatar_url || "/images/default-avatar.jpg",
+    initials: profile.full_name?.split(' ').map(n => n[0]).join('') || 'U',
+    email: profile.email
+  } : null
 
   // Mock pending bookings count - in real app, get from API
   const pendingBookingsCount = 2
@@ -68,10 +73,14 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
     }
   }, [])
 
-  const handleSignOut = () => {
-    // Handle logout logic here
+  const handleSignOut = async () => {
     setIsProfileDropdownOpen(false)
-    // In real app, would call logout function
+    try {
+      await signOut()
+      // User will be redirected to login by auth state change
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
   const isActivePage = (path: string) => {
@@ -148,8 +157,10 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
 
             {/* Right: Actions */}
             <div className="flex items-center space-x-4">
-              {/* Profile Dropdown (Desktop) */}
-              <div className="hidden md:flex items-center relative" ref={profileDropdownRef}>
+              {/* Show profile dropdown only if user is authenticated and not loading */}
+              {!loading && user && (
+                /* Profile Dropdown (Desktop) */
+                <div className="hidden md:flex items-center relative" ref={profileDropdownRef}>
                 <button
                   onClick={toggleProfileDropdown}
                   className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
@@ -162,13 +173,13 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                 </button>
 
                 {/* Profile Dropdown Menu */}
-                {isProfileDropdownOpen && (
+                {isProfileDropdownOpen && user && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">john.uwimana@example.com</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
-                    
+
                     <Link
                       href="/profile"
                       onClick={() => setIsProfileDropdownOpen(false)}
@@ -177,7 +188,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                       <User className="w-4 h-4 mr-3" />
                       My Profile
                     </Link>
-                    
+
                     <Link
                       href="/settings"
                       onClick={() => setIsProfileDropdownOpen(false)}
@@ -186,7 +197,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                       <Settings className="w-4 h-4 mr-3" />
                       Settings
                     </Link>
-                    
+
                     <Link
                       href="/help"
                       onClick={() => setIsProfileDropdownOpen(false)}
@@ -195,7 +206,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                       <HelpCircle className="w-4 h-4 mr-3" />
                       Help
                     </Link>
-                    
+
                     <div className="border-t border-gray-100 mt-1">
                       <button
                         onClick={handleSignOut}
@@ -207,7 +218,15 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
+
+              {/* Show login button if not authenticated and not loading */}
+              {!loading && !user && (
+                <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>
+                  <Link href="/login">Login</Link>
+                </Button>
+              )}
 
               {/* Mobile Menu Toggle */}
               <Button
@@ -305,9 +324,9 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
 
               {/* Logout */}
               <button
-                onClick={() => {
-                  // Handle logout logic here
+                onClick={async () => {
                   handleMobileMenuToggle()
+                  await handleSignOut()
                 }}
                 className="flex items-center space-x-3 px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 w-full text-left"
               >

@@ -7,10 +7,10 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { customerId: string } }
+  { params }: { params: Promise<{ customerId: string }> }
 ) {
   try {
-    const customerId = params.customerId
+    const { customerId } = await params
     
     console.log('🔍 Fetching bookings for customer:', customerId)
 
