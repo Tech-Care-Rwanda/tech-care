@@ -56,7 +56,8 @@ export default function Home() {
       location: searchData.location,
       serviceType: searchData.serviceType,
       urgency: searchData.urgency,
-      details: searchData.details
+      details: searchData.details,
+      coordinates: searchData.coordinates,
     })
     router.push('/search-results')
   }
@@ -90,6 +91,7 @@ export default function Home() {
       serviceId: "software"
     }
   ]
+  console.log(searchData);
 
   return (
     <div className="min-h-screen">
@@ -110,7 +112,7 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
-        
+
         <div className="relative z-10 text-center space-y-6 sm:space-y-8 px-4 sm:px-6">
           {/* Search Bar */}
           <div className="bg-white rounded-2xl p-4 max-w-5xl mx-auto shadow-2xl">
@@ -118,14 +120,15 @@ export default function Home() {
               {/* Location Map Picker */}
               <div className="md:col-span-1">
                 <LocationMapPicker
+                  coordinates={searchData.coordinates}
                   selectedLocation={searchData.location}
                   onLocationChange={handleLocationChange}
                 />
               </div>
-              
+
               {/* Service Type Dropdown */}
               <div className="relative" data-search-dropdown>
-                <div 
+                <div
                   className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -137,14 +140,14 @@ export default function Home() {
                     <p className="font-semibold text-sm text-gray-900">Service Type</p>
                     <p className="text-gray-700 text-sm">{searchData.serviceType}</p>
                   </div>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-4 w-4 text-gray-400 transition-transform ${
                       showServiceDropdown ? 'rotate-180' : ''
-                    }`} 
+                    }`}
                   />
                 </div>
                 {showServiceDropdown && (
-                  <div 
+                  <div
                     className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -164,10 +167,10 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              
+
               {/* Urgency Dropdown */}
               <div className="relative" data-search-dropdown>
-                <div 
+                <div
                   className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors h-full"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -179,14 +182,14 @@ export default function Home() {
                     <p className="font-semibold text-sm text-gray-900">Urgency</p>
                     <p className="text-gray-700 text-sm">{searchData.urgency}</p>
                   </div>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-4 w-4 text-gray-400 transition-transform ${
                       showUrgencyDropdown ? 'rotate-180' : ''
-                    }`} 
+                    }`}
                   />
                 </div>
                 {showUrgencyDropdown && (
-                  <div 
+                  <div
                     className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg border mt-2 z-[100] max-h-60 overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -206,7 +209,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              
+
               {/* Details Input and Search Button */}
               <div className="flex items-center space-x-3">
                 <div className="flex-1 px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors h-full">
@@ -221,8 +224,8 @@ export default function Home() {
                     />
                   </div>
                 </div>
-                <Button 
-                  size="icon" 
+                <Button
+                  size="icon"
                   className="bg-red-500 hover:bg-red-600 rounded-lg w-12 h-12 flex-shrink-0"
                   onClick={handleSearch}
                 >
@@ -231,12 +234,12 @@ export default function Home() {
               </div>
             </div>
           </div>
-          
+
           <div className="space-y-8 sm:space-y-10">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight px-2">
               Need tech help? We&apos;ve got you covered.
             </h1>
-            <Button 
+            <Button
               className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold"
               onClick={handleSearch}
             >
@@ -252,12 +255,12 @@ export default function Home() {
           <div className="mb-8 sm:mb-12 text-center sm:text-left">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 px-2">Discover TechCare Services</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {services.map((service, index) => (
-              <Card 
-                key={index} 
-                className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group" 
+              <Card
+                key={index}
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group"
                 onClick={() => router.push(`/services/${service.serviceId}`)}
               >
                 <div className="relative h-40 sm:h-48">
@@ -367,7 +370,7 @@ export default function Home() {
                 <li><Link href="#" className="hover:text-gray-900 transition-colors">Report a neighborhood concern</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="font-semibold text-gray-900 mb-4 text-base sm:text-lg">Technician</h3>
               <ul className="space-y-2 sm:space-y-3 text-gray-600 text-sm sm:text-base">
@@ -378,7 +381,7 @@ export default function Home() {
                 <li><Link href="#" className="hover:text-gray-900 transition-colors">How to help responsibly</Link></li>
               </ul>
             </div>
-            
+
             <div className="sm:col-span-2 md:col-span-1">
               <h3 className="font-semibold text-gray-900 mb-4 text-base sm:text-lg">About</h3>
               <ul className="space-y-2 sm:space-y-3 text-gray-600 text-sm sm:text-base">
@@ -391,7 +394,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-200 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm text-gray-600">
               <span>© 2025 TechCare, Inc.</span>

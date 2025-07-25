@@ -50,10 +50,12 @@ function SearchResultsContent() {
     // Add all filter values to URL
     Object.entries(searchFilters).forEach(([key, value]) => {
       if (value !== '' && value !== false && value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          if (value.length > 0) {
+        if (Array.isArray(value) && value.length > 0) {
             newParams.set(key, value.join(','))
-          }
+        } else if (Object.entries(value).length > 0 && key == 'coordinates') {
+          Object.entries(value).forEach(([k, v]) => {
+            newParams.set(k, String(v))
+          });
         } else {
           newParams.set(key, String(value))
         }
@@ -65,7 +67,8 @@ function SearchResultsContent() {
   }, [searchFilters])
 
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
-  const [mapCenter, setMapCenter] = useState({ lat: -1.9441, lng: 30.0619 })
+  console.log('searchParams', searchParams);
+  const [mapCenter, setMapCenter] = useState({ lat: searchParams?.lat || -1.9441, lng: searchParams?.lng || 30.0619 })
 
   const isLoading = searchLoading || shopsLoading
 
