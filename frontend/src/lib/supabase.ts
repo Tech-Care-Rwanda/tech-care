@@ -614,11 +614,11 @@ Error details: ${error.message}`)
       updateData.technician_notes = notes
     }
 
-    if (status === 'CONFIRMED') {
+    if (status === 'confirmed') {
       updateData.confirmed_at = new Date().toISOString()
-    } else if (status === 'COMPLETED') {
+    } else if (status === 'completed') {
       updateData.completed_at = new Date().toISOString()
-    } else if (status === 'CANCELLED') {
+    } else if (status === 'cancelled') {
       updateData.cancelled_at = new Date().toISOString()
     }
 
