@@ -13,16 +13,16 @@ export const languages = {
 } as const
 
 export type Language = keyof typeof languages
-export type UserRole = "customer" | "technician" | "admin" | null
+export type UserRole = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN' | null
 
 // API Role types and mapping utilities
 export type ApiRole = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN';
 
 export function apiRoleToUserRole(apiRole: ApiRole): UserRole {
   const mapping: Record<ApiRole, UserRole> = {
-    'CUSTOMER': 'customer',
-    'TECHNICIAN': 'technician',
-    'ADMIN': 'admin',
+    'CUSTOMER': 'CUSTOMER',
+    'TECHNICIAN': 'TECHNICIAN',
+    'ADMIN': 'ADMIN',
   };
   return mapping[apiRole];
 }
@@ -30,9 +30,9 @@ export function apiRoleToUserRole(apiRole: ApiRole): UserRole {
 export function userRoleToApiRole(userRole: UserRole): ApiRole | null {
   if (!userRole) return null;
   const mapping: Record<NonNullable<UserRole>, ApiRole> = {
-    'customer': 'CUSTOMER',
-    'technician': 'TECHNICIAN',
-    'admin': 'ADMIN',
+    'CUSTOMER': 'CUSTOMER',
+    'TECHNICIAN': 'TECHNICIAN',
+    'ADMIN': 'ADMIN',
   };
   return mapping[userRole];
 }

@@ -8,7 +8,7 @@ import type { User } from '@/lib/supabase';
 interface AuthContextType {
   // Core auth state
   user: User | null
-  supabaseUser: any // Supabase auth user
+  supabaseUser: unknown // Supabase auth user
   isAuthenticated: boolean
   isLoading: boolean
   isHydrated: boolean
@@ -22,7 +22,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>
 
   // Role helpers
-  getUserRole: () => 'customer' | 'technician' | 'admin' | null
+  getUserRole: () => 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN' | null
   isCustomer: boolean
   isTechnician: boolean
   isAdmin: boolean
@@ -30,18 +30,20 @@ interface AuthContextType {
 
 // Compatibility types for existing components
 export interface CustomerSignupData {
-  fullName: string
+  full_name: string
   email: string
   password: string
-  phoneNumber: string
+  phone_number: string
 }
 
 export interface TechnicianSignupData extends CustomerSignupData {
   gender: string
   age: number
-  dateOfBirth: string
+  date_of_birth: string
   experience: string
   specialization: string
+  profile_image?: string
+  certificate_document?: string
 }
 
 // Re-export User type for compatibility
@@ -59,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const customerRegister = async (userData: CustomerSignupData) => {
     const signUpData: SignUpData = {
-      fullName: userData.fullName,
-      phoneNumber: userData.phoneNumber,
+      full_name: userData.full_name,
+      phone_number: userData.phone_number,
       role: 'CUSTOMER'
     }
     return await supabaseAuth.signUp(userData.email, userData.password, signUpData)
@@ -68,12 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const technicianRegister = async (userData: TechnicianSignupData) => {
     const signUpData: SignUpData = {
-      fullName: userData.fullName,
-      phoneNumber: userData.phoneNumber,
+      full_name: userData.full_name,
+      phone_number: userData.phone_number,
       role: 'TECHNICIAN',
       gender: userData.gender,
       age: userData.age,
-      dateOfBirth: userData.dateOfBirth,
+      date_of_birth: userData.date_of_birth,
       experience: userData.experience,
       specialization: userData.specialization
     }
@@ -93,9 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // This method is kept for compatibility
   }
 
-  const getUserRole = (): 'customer' | 'technician' | 'admin' | null => {
+  const getUserRole = (): 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN' | null => {
     if (!supabaseAuth.profile) return null
-    return supabaseAuth.profile.role.toLowerCase() as 'customer' | 'technician' | 'admin'
+    return supabaseAuth.profile.role.toLowerCase() as 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'
   }
 
   // Debug logging for authentication state
@@ -153,6 +155,6 @@ export function transformBackendUser(backendUser: any): User {
     is_active: backendUser.isActive ?? backendUser.is_active ?? true,
     created_at: backendUser.createdAt || backendUser.created_at,
     updated_at: backendUser.updatedAt || backendUser.updated_at,
-    supabase_user_id: backendUser.supabase_user_id
+    user_id: backendUser.user_id
   }
 } 

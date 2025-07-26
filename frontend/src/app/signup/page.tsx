@@ -7,24 +7,24 @@ import { CheckCircle, Upload, Eye, EyeOff, Loader2, Users, Wrench } from 'lucide
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { getPostSignupRedirect } from '@/lib/utils/authUtils'
 
-type UserType = 'customer' | 'technician'
+type UserType = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'
 
 interface CustomerFormData {
-  fullName: string
+  full_name: string
   email: string
-  phoneNumber: string
+  phone_number: string
   password: string
-  confirmPassword: string
+  confirm_password: string
 }
 
 interface TechnicianFormData extends CustomerFormData {
   gender: string
   age: number
-  DateOfBirth: string
+  date_of_birth: string
   experience: string
   specialization: string
-  profileImage?: File
-  certificateDocument?: File
+  profile_image?: File
+  certificate_document?: File
 }
 
 export default function SignupPage() {
@@ -34,26 +34,26 @@ export default function SignupPage() {
   const [userType, setUserType] = useState<UserType | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showconfirm_password, setShowconfirm_password] = useState(false)
   const [error, setError] = useState('')
 
   const [customerData, setCustomerData] = useState<CustomerFormData>({
-    fullName: '',
+    full_name: '',
     email: '',
-    phoneNumber: '',
+    phone_number: '',
     password: '',
-    confirmPassword: ''
+    confirm_password: ''
   })
 
   const [technicianData, setTechnicianData] = useState<TechnicianFormData>({
-    fullName: '',
+    full_name: '',
     email: '',
-    phoneNumber: '',
+    phone_number: '',
     password: '',
-    confirmPassword: '',
+    confirm_password: '',
     gender: '',
     age: 0,
-    DateOfBirth: '',
+    date_of_birth: '',
     experience: '',
     specialization: ''
   })
@@ -85,12 +85,12 @@ export default function SignupPage() {
   }
 
   const validateCustomerForm = (): boolean => {
-    if (!customerData.fullName || !customerData.email || !customerData.phoneNumber || !customerData.password) {
+    if (!customerData.full_name || !customerData.email || !customerData.phone_number || !customerData.password) {
       setError('Please fill in all required fields')
       return false
     }
 
-    if (customerData.password !== customerData.confirmPassword) {
+    if (customerData.password !== customerData.confirm_password) {
       setError('Passwords do not match')
       return false
     }
@@ -105,7 +105,7 @@ export default function SignupPage() {
 
   const validateTechnicianForm = (): boolean => {
     // Check required fields
-    if (!technicianData.fullName.trim()) {
+    if (!technicianData.full_name.trim()) {
       setError('Full name is required')
       return false
     }
@@ -113,7 +113,7 @@ export default function SignupPage() {
       setError('Email is required')
       return false
     }
-    if (!technicianData.phoneNumber.trim()) {
+    if (!technicianData.phone_number.trim()) {
       setError('Phone number is required')
       return false
     }
@@ -129,7 +129,7 @@ export default function SignupPage() {
       setError('Age must be between 18 and 100')
       return false
     }
-    if (!technicianData.DateOfBirth) {
+    if (!technicianData.date_of_birth) {
       setError('Date of birth is required')
       return false
     }
@@ -141,13 +141,13 @@ export default function SignupPage() {
       setError('Specialization is required')
       return false
     }
-    if (!technicianData.profileImage) {
+    if (!technicianData.profile_image) {
       setError('Profile image is required')
       return false
     }
 
     // Check password requirements
-    if (technicianData.password !== technicianData.confirmPassword) {
+    if (technicianData.password !== technicianData.confirm_password) {
       setError('Passwords do not match')
       return false
     }
@@ -172,9 +172,9 @@ export default function SignupPage() {
 
     try {
       const result = await customerRegister({
-        fullName: customerData.fullName,
+        full_name: customerData.full_name,
         email: customerData.email,
-        phoneNumber: customerData.phoneNumber,
+        phone_number: customerData.phone_number,
         password: customerData.password
       })
 
@@ -205,17 +205,17 @@ export default function SignupPage() {
       }
 
       const result = await technicianRegister({
-        fullName: technicianData.fullName.trim(),
+        full_name: technicianData.full_name.trim(),
         email: technicianData.email.trim(),
-        phoneNumber: technicianData.phoneNumber.trim(),
+        phone_number: technicianData.phone_number.trim(),
         password: technicianData.password,
         gender: technicianData.gender,
         age: parseInt(technicianData.age.toString()) || 0,
-        DateOfBirth: technicianData.DateOfBirth,
-        experience: getExperienceNumber(technicianData.experience),
+        date_of_birth: technicianData.date_of_birth,
+        experience: getExperienceNumber(technicianData.experience).toString(),
         specialization: technicianData.specialization,
-        profileImage: technicianData.profileImage!,
-        certificateDocument: technicianData.certificateDocument
+        profile_image: technicianData.profile_image?.name,
+        certificate_document: technicianData.certificate_document?.name
       })
 
       if (result.success) {
@@ -247,7 +247,7 @@ export default function SignupPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <button
           onClick={() => {
-            setUserType('customer')
+            setUserType('CUSTOMER')
             setCurrentStep(2)
           }}
           className="p-8 border-2 border-gray-200 rounded-2xl hover:border-red-500 hover:bg-red-50 transition-all duration-200 group"
@@ -268,7 +268,7 @@ export default function SignupPage() {
 
         <button
           onClick={() => {
-            setUserType('technician')
+            setUserType('TECHNICIAN')
             setCurrentStep(2)
           }}
           className="p-8 border-2 border-gray-200 rounded-2xl hover:border-red-500 hover:bg-red-50 transition-all duration-200 group"
@@ -291,22 +291,22 @@ export default function SignupPage() {
   )
 
   const renderCustomerForm = () => (
-    <div className="space-y-6">
+    <form className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Registration</h2>
         <p className="text-gray-600">Create your customer account to get started</p>
       </div>
 
       <div>
-        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
           Full Name *
         </label>
         <input
           type="text"
-          id="fullName"
-          name="fullName"
+          id="full_name"
+          name="full_name"
           required
-          value={customerData.fullName}
+          value={customerData.full_name}
           onChange={handleCustomerInputChange}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
           placeholder="Enter your full name"
@@ -333,15 +333,15 @@ export default function SignupPage() {
       </div>
 
       <div>
-        <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
           Phone Number *
         </label>
         <input
           type="tel"
-          id="phoneNumber"
-          name="phoneNumber"
+          id="phone_number"
+          name="phone_number"
           required
-          value={customerData.phoneNumber}
+          value={customerData.phone_number}
           onChange={handleCustomerInputChange}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
           placeholder="+250 7XX XXX XXX"
@@ -378,16 +378,16 @@ export default function SignupPage() {
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
           Confirm Password *
         </label>
         <div className="relative">
           <input
-            type={showConfirmPassword ? 'text' : 'password'}
-            id="confirmPassword"
-            name="confirmPassword"
+            type={showconfirm_password ? 'text' : 'password'}
+            id="confirm_password"
+            name="confirm_password"
             required
-            value={customerData.confirmPassword}
+            value={customerData.confirm_password}
             onChange={handleCustomerInputChange}
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="Confirm your password"
@@ -396,11 +396,11 @@ export default function SignupPage() {
           />
           <button
             type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            onClick={() => setShowconfirm_password(!showconfirm_password)}
             className="absolute inset-y-0 right-0 flex items-center pr-3"
             disabled={isLoading}
           >
-            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            {showconfirm_password ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
       </div>
@@ -433,7 +433,7 @@ export default function SignupPage() {
           )}
         </button>
       </div>
-    </div>
+    </form>
   )
 
   const renderTechnicianStep1 = () => (
@@ -445,16 +445,16 @@ export default function SignupPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
             Full Name *
           </label>
           <input
             type="text"
-            id="fullName"
-            name="fullName"
+            id="full_name"
+            name="full_name"
             required
             autoComplete="name"
-            value={technicianData.fullName}
+            value={technicianData.full_name}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="Enter your full name"
@@ -483,16 +483,16 @@ export default function SignupPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
             Phone Number *
           </label>
           <input
             type="tel"
-            id="phoneNumber"
-            name="phoneNumber"
+            id="phone_number"
+            name="phone_number"
             required
             autoComplete="tel"
-            value={technicianData.phoneNumber}
+            value={technicianData.phone_number}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="+250 7XX XXX XXX"
@@ -543,16 +543,16 @@ export default function SignupPage() {
         </div>
 
         <div>
-          <label htmlFor="DateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-2">
             Date of Birth *
           </label>
           <input
             type="date"
-            id="DateOfBirth"
-            name="DateOfBirth"
+            id="date_of_birth"
+            name="date_of_birth"
             required
             autoComplete="bday"
-            value={technicianData.DateOfBirth}
+            value={technicianData.date_of_birth}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             disabled={isLoading}
@@ -589,17 +589,17 @@ export default function SignupPage() {
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
           Confirm Password *
         </label>
         <div className="relative">
           <input
-            type={showConfirmPassword ? 'text' : 'password'}
-            id="confirmPassword"
-            name="confirmPassword"
+            type={showconfirm_password ? 'text' : 'password'}
+            id="confirm_password"
+            name="confirm_password"
             required
             autoComplete="new-password"
-            value={technicianData.confirmPassword}
+            value={technicianData.confirm_password}
             onChange={handleTechnicianInputChange}
             className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             placeholder="Confirm your password"
@@ -607,11 +607,11 @@ export default function SignupPage() {
           />
           <button
             type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            onClick={() => setShowconfirm_password(!showconfirm_password)}
             className="absolute inset-y-0 right-0 flex items-center pr-3"
             disabled={isLoading}
           >
-            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            {showconfirm_password ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
       </div>
@@ -698,18 +698,18 @@ export default function SignupPage() {
             accept="image/*"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) handleFileUpload('profileImage', file)
+              if (file) handleFileUpload('profile_image', file)
             }}
             className="hidden"
-            id="profileImage"
-            name="profileImage"
+            id="profile_image"
+            name="profile_image"
             required
             disabled={isLoading}
           />
-          <label htmlFor="profileImage" className="cursor-pointer">
+          <label htmlFor="profile_image" className="cursor-pointer">
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600">
-              {technicianData.profileImage ? technicianData.profileImage.name : 'Upload profile image (required)'}
+              {technicianData.profile_image ? technicianData.profile_image.name : 'Upload profile image (required)'}
             </p>
           </label>
         </div>
@@ -725,18 +725,18 @@ export default function SignupPage() {
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) handleFileUpload('certificateDocument', file)
+              if (file) handleFileUpload('certificate_document', file)
             }}
             className="hidden"
-            id="certificateDocument"
-            name="certificateDocument"
+            id="certificate_document"
+            name="certificate_document"
             required
             disabled={isLoading}
           />
-          <label htmlFor="certificateDocument" className="cursor-pointer">
+          <label htmlFor="certificate_document" className="cursor-pointer">
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600">
-              {technicianData.certificateDocument ? technicianData.certificateDocument.name : 'Upload certificate/qualification (optional)'}
+              {technicianData.certificate_document ? technicianData.certificate_document.name : 'Upload certificate/qualification (optional)'}
             </p>
           </label>
         </div>
@@ -776,7 +776,7 @@ export default function SignupPage() {
       <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl w-full">
           {/* Progress Steps for Technician */}
-          {userType === 'technician' && currentStep > 1 && (
+          {userType === 'TECHNICIAN' && currentStep > 1 && (
             <div className="flex justify-center mb-8">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center">
@@ -807,9 +807,9 @@ export default function SignupPage() {
 
             {/* Form Content */}
             {currentStep === 1 && renderUserTypeSelection()}
-            {currentStep === 2 && userType === 'customer' && renderCustomerForm()}
-            {currentStep === 2 && userType === 'technician' && renderTechnicianStep1()}
-            {currentStep === 3 && userType === 'technician' && renderTechnicianStep2()}
+            {currentStep === 2 && userType === 'CUSTOMER' && renderCustomerForm()}
+            {currentStep === 2 && userType === 'TECHNICIAN' && renderTechnicianStep1()}
+            {currentStep === 3 && userType === 'TECHNICIAN' && renderTechnicianStep2()}
 
             {/* Already have account link */}
             <div className="mt-6 text-center">

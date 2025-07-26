@@ -13,7 +13,7 @@ const mockUser = {
   is_active: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  supabase_user_id: '123'
+  user_id: '123'
 }
 
 const mockTechnician = {

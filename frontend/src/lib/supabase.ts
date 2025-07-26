@@ -27,15 +27,16 @@ export const supabase = createClient(
 
 // Enhanced database types with auth integration
 export interface User {
-  id: string
+  id?: string
   full_name: string
   phone_number: string
   email: string
   role: 'ADMIN' | 'TECHNICIAN' | 'CUSTOMER'
   is_active: boolean
-  supabase_user_id?: string // Link to Supabase Auth user
+  user_id: string // Link to Supabase Auth user
   created_at: string
   updated_at: string
+  avatar_url?: string
 }
 
 export interface TechnicianDetails {
@@ -43,14 +44,14 @@ export interface TechnicianDetails {
   user_id: string
   gender?: string
   age?: number
-  date_of_birth?: string
+  date_of_birth?: Date
   experience: string
   specialization: string
   image_url?: string
   certificate_url?: string
   is_available: boolean
   rate: number
-  approval_status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  approval_status: 'PENDING' | 'APPROVED' | 'REJECTED'
   latitude?: number
   longitude?: number
   address?: string
