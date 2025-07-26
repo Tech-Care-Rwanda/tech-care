@@ -13,8 +13,8 @@ if (!isSupabaseConfigured) {
 
 // Create Supabase client with fallback values for development
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key', 
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
   {
     auth: {
       persistSession: true,
@@ -27,13 +27,12 @@ export const supabase = createClient(
 
 // Enhanced database types with auth integration
 export interface User {
-  id?: string
+  id: string // Primary key that matches Supabase Auth user ID
   full_name: string
   phone_number: string
-  email: string
-  role: 'ADMIN' | 'TECHNICIAN' | 'CUSTOMER'
+  email?: string // Make optional since some users have NULL emails
+  role?: 'ADMIN' | 'TECHNICIAN' | 'CUSTOMER' // Make optional until we confirm the column exists
   is_active: boolean
-  user_id: string // Link to Supabase Auth user
   created_at: string
   updated_at: string
   avatar_url?: string
@@ -41,7 +40,7 @@ export interface User {
 
 export interface TechnicianDetails {
   id: string
-  user_id: string
+  user_id: string // This is correct - references users.id
   gender?: string
   age?: number
   date_of_birth?: Date

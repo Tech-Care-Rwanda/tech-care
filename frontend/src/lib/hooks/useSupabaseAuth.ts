@@ -86,11 +86,11 @@ export function useSupabaseAuth(): AuthState & AuthActions {
       setError(null);
       console.log('Fetching profile for user ID:', supabaseUserId);
 
-      // Fetch the user profile based on user_id
+      // Fetch the user profile based on id (not user_id)
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('user_id', supabaseUserId)
+        .eq('id', supabaseUserId)
         .single();
 
       if (error) {
@@ -168,7 +168,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
         // Prepare user profile data with current timestamp
         const now = new Date().toISOString();
         const profileData = {
-          user_id: authData.user.id,
+          id: authData.user.id,
           email: email.toLowerCase().trim(),
           full_name: userData.full_name.trim(),
           phone_number: userData.phone_number.trim(),
@@ -188,15 +188,18 @@ export function useSupabaseAuth(): AuthState & AuthActions {
           throw new Error(`Database access error: ${accessError.message}`);
         }
 
-        // Create user profile in database
+        // Create user profile in database using UPSERT to handle existing records
         const { data: insertedProfile, error: profileError } = await supabase
           .from('users')
-          .insert(profileData)
+          .upsert(profileData, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
           .select()
           .single();
 
         if (profileError) {
-          console.log('Profile creation error details:', profileError);
+          console.log('Profile creation/update error details:', profileError);
           console.log('Additional error context:', {
             message: profileError.message,
             details: profileError.details,
@@ -208,61 +211,61 @@ export function useSupabaseAuth(): AuthState & AuthActions {
 
           // Try to clean up auth user if profile creation fails
           try {
-            console.log('Attempting to sign out due to profile creation failure...');
+            console.log('Attempting to sign out due to profile operation failure...');
             await supabase.auth.signOut();
           } catch (cleanupError) {
             console.error('Cleanup error:', cleanupError);
           }
 
           // Provide more specific error messages based on error codes
-          let userFriendlyMessage = 'Profile creation failed. ';
+          let userFriendlyMessage = 'Profile operation failed. ';
 
-          if (profileError.code === '23505') {
-            userFriendlyMessage += 'An account with this email already exists.';
-          } else if (profileError.code === '23502') {
+          if (profileError.code === '23502') {
             userFriendlyMessage += 'Missing required information.';
           } else if (profileError.code === '42501') {
             userFriendlyMessage += 'Database permission error. Please contact support.';
           } else {
-            userFriendlyMessage += `${profileError.message}. Check console for details.`;
+            userFriendlyMessage += profileError.message || 'Please try again.';
           }
 
           throw new Error(userFriendlyMessage);
         }
 
-        console.log('Profile created successfully for user:', authData.user.id);
-
-        // Create technician details if a role is TECHNICIAN
-        if (userData.role === 'TECHNICIAN' && userData.specialization && insertedProfile) {
-          console.log('Creating technician details for user ID:', insertedProfile.id);
-
-          const { error: techError } = await supabase.from('technician_details').insert({
-            user_id: insertedProfile.id,
-            gender: userData.gender || '',
+        // For technicians, also create technician_details record
+        if (userData.role === 'TECHNICIAN') {
+          const technicianDetailsData = {
+            user_id: insertedProfile.id, // user_id in technician_details references users.id
+            gender: userData.gender,
             age: userData.age,
             date_of_birth: userData.date_of_birth,
-            experience: userData.experience || 'N/A',
-            specialization: userData.specialization,
-            certificate_url: '', // Will be updated later
-            approval_status: 'PENDING',
-          });
+            experience: userData.experience || '',
+            specialization: userData.specialization || '',
+            is_available: true,
+            rate: 15000, // Default rate
+            created_at: now,
+            updated_at: now,
+          };
+
+          const { error: techError } = await supabase
+            .from('technician_details')
+            .insert(technicianDetailsData);
 
           if (techError) {
-            console.error('Technician details creation error:', techError);
-            // Don't fail the entire signup for this, but log it
-          } else {
-            console.log('Technician details created successfully');
+            console.error('Error creating technician details:', techError);
+            // Don't fail the whole signup for this
           }
         }
 
+        console.log('✅ Profile created successfully:', insertedProfile);
+        setProfile(insertedProfile);
         return { success: true };
+      } else {
+        throw new Error('Failed to create user profile');
       }
-
-      throw new Error('No user returned from signup');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Signup failed';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setError(error.message || 'Signup failed');
+      return { success: false, error: error.message || 'Signup failed' };
     } finally {
       setLoading(false);
     }
@@ -304,13 +307,19 @@ export function useSupabaseAuth(): AuthState & AuthActions {
   // Update user profile
   const updateProfile = async (updates: Partial<User>) => {
     try {
-      if (!user || !profile) throw new Error('No user logged in');
-
       setError(null);
-      const { error } = await supabase
+
+      if (!user || !profile) {
+        throw new Error('No user logged in');
+      }
+
+      const { data, error } = await supabase
         .from('users')
-        .update(updates)
-        .eq('user_id', user.id);
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 

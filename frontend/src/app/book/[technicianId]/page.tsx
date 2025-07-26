@@ -110,7 +110,7 @@ export default function BookTechnicianPage() {
     // Get available service options based on technician specialization
     const getServiceOptions = () => {
         console.log('getServiceOptions called, technician:', technician)
-        
+
         if (!technician) {
             console.log('No technician data, returning empty array')
             return []
@@ -130,7 +130,7 @@ export default function BookTechnicianPage() {
             name: `${specialty} - ${service.name}`,
             description: `${service.description} for ${specialty.toLowerCase()}`
         }))
-        
+
         console.log('Generated services:', services)
         return services
     }
@@ -204,10 +204,10 @@ export default function BookTechnicianPage() {
             const serviceOptions = getServiceOptions()
             console.log('Available service options:', serviceOptions)
             console.log('Selected service ID:', formData.serviceId)
-            
+
             const selectedService = serviceOptions.find(s => s.id === Number(formData.serviceId))
             console.log('Found selected service:', selectedService)
-            
+
             if (!selectedService) {
                 console.error('Service selection failed:', {
                     serviceId: formData.serviceId,
@@ -220,7 +220,7 @@ export default function BookTechnicianPage() {
             // Create booking data using the clean service
             const bookingData = {
                 customer_id: "550e8400-e29b-41d4-a716-446655440011", // Test Customer UUID
-                technician_id: technician?.user_id || technician?.id || technicianId, // Use user_id if FK points to users table
+                technician_id: technician?.user_id || technician?.id || technicianId, // user_id is correct for technician_details
                 service_id: Number(formData.serviceId),
                 service_type: selectedService.name,
                 problem_description: formData.customerNotes.trim() || selectedService.description,
@@ -228,7 +228,10 @@ export default function BookTechnicianPage() {
                 price_rwf: selectedService.price,
                 duration: formData.duration,
                 scheduled_date: `${formData.scheduledDate}T${formData.scheduledTime}:00`,
-                customer_notes: formData.customerNotes.trim() || null
+                customer_notes: formData.customerNotes.trim() || null,
+                status: 'pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             }
 
             console.log('Creating booking with clean service:', bookingData)
