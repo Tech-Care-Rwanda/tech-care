@@ -10,3 +10,13 @@
 
  ✓ Starting...
  ✓ Ready in 1636ms
+ ○ Compiling /signup ...
+ ✓ Compiled /signup in 2.7s
+Auth State Debug: {
+  hasUser: false,
+  hasProfile: false,
+  isLoading: true,
+  profile: null,
+  error: null
+}
+ GET /signup 200 in 3512ms

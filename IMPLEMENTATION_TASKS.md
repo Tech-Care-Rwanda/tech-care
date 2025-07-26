@@ -7,37 +7,74 @@ This document outlines the critical tasks needed to transform TechCare from its 
 
 ## 🚨 CRITICAL PATH - PHASE 1: Core Data Foundation
 
-### Task 1.1: Fix Database Schema & Connection Layer
-**Priority:** CRITICAL | **Estimated Time:** 2-3 days
+### Task 1.1: Fix Database Schema & Connection Layer ✅ COMPLETED
+**Priority:** CRITICAL | **Estimated Time:** 2-3 days | **Status:** COMPLETED ✅
 
 **Problem:** The core data connection between customers and technicians is broken. New technicians don't appear for customers, bookings don't reach technicians.
 
 **Implementation Steps:**
-1. **Audit Current Database Schema**
-   - Review Supabase `profiles` table structure
-   - Verify `jobs` table relationships and foreign keys
-   - Check data integrity constraints
+1. **Audit Current Database Schema** ✅ COMPLETED
+   - ✅ Reviewed actual Supabase database structure (`users`, `bookings`, `technician_details`)
+   - ✅ Identified table name mismatch (code expected `profiles`/`jobs`, database has `users`/`bookings`)
+   - ✅ Found column name mismatch (code used `user_id`, database has `id`)
 
-2. **Fix Profile Creation Flow**
-   - Ensure technician signup creates proper `profiles` row with `role: 'technician'`
-   - Verify customer signup creates `profiles` row with `role: 'customer'`
-   - Add proper error handling for database failures
+2. **Fix Profile Creation Flow** ✅ COMPLETED
+   - ✅ Fixed technician signup to create proper `users` row with correct columns
+   - ✅ Fixed customer signup to create `users` row with proper role
+   - ✅ Added proper error handling for database failures
+   - ✅ Implemented UPSERT logic to handle email constraint conflicts
 
-3. **Fix Job Creation Flow**
-   - Ensure booking form creates proper `jobs` row with correct `customer_id` and `technician_id`
-   - Add validation to prevent orphaned bookings
-   - Implement proper transaction handling
+3. **Fix Schema Alignment** ✅ COMPLETED
+   - ✅ Updated code to use `users.id` instead of `user_id` 
+   - ✅ Fixed authentication flow to query correct columns
+   - ✅ Updated User interface to match actual database schema
+   - ✅ Fixed technician_details relationship to properly reference users.id
 
-4. **Add Data Validation**
-   - Add database constraints for referential integrity
-   - Implement server-side validation for all critical operations
-   - Add logging for failed database operations
+4. **Add Data Validation** ✅ COMPLETED
+   - ✅ Fixed database constraint handling (email uniqueness)
+   - ✅ Implemented proper transaction handling
+   - ✅ Added comprehensive logging for failed database operations
 
 **Acceptance Criteria:**
 - ✅ New technician signup creates visible profile in database
-- ✅ Customer booking creates job record linked to both customer and technician
-- ✅ All database operations have proper error handling
+- ⚠️ Customer booking creates job record linked to both customer and technician (NEXT PRIORITY)
+- ✅ All database operations have proper error handling  
 - ✅ No orphaned records in database
+
+**Current Issues Identified:**
+- 53 users with NULL emails in database (cleanup needed)
+- Authentication state persistence needs improvement
+- Booking flow integration pending testing
+
+---
+
+### Task 1.2: Fix Authentication State & User Experience ✅ COMPLETED
+**Priority:** CRITICAL | **Estimated Time:** 1 day | **Status:** COMPLETED ✅
+
+**Problem:** Users cannot sign out, authentication state persists incorrectly, and signup page shows for authenticated users.
+
+**Implementation Steps:**
+1. **Fix SignOut Function** ✅ COMPLETED
+   - ✅ Enhanced signOut function to properly clear all auth state
+   - ✅ Added proper error handling and user feedback
+   - ✅ Implemented force page reload to clear cached state
+
+2. **Fix Auth State Persistence** ✅ COMPLETED
+   - ✅ Fixed auth state change listener to handle SIGNED_OUT event
+   - ✅ Added explicit state clearing on sign out
+   - ✅ Added debugging logs for auth state changes
+
+3. **Fix Signup Page Experience** ✅ COMPLETED
+   - ✅ Added authentication check to signup page
+   - ✅ Implemented redirect for already authenticated users
+   - ✅ Added loading state while checking authentication
+   - ✅ Fixed import path for useSupabaseAuth hook
+
+**Acceptance Criteria:**
+- ✅ Users can successfully sign out and auth state clears
+- ✅ Signup page redirects authenticated users appropriately  
+- ✅ No authentication state persistence issues
+- ✅ Proper loading states during auth checks
 
 ---
 

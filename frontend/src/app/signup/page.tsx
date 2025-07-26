@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Upload, Eye, EyeOff, Loader2, Users, Wrench } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { getPostSignupRedirect } from '@/lib/utils/authUtils'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 
 type UserType = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'
 
@@ -30,6 +31,7 @@ interface TechnicianFormData extends CustomerFormData {
 export default function SignupPage() {
   const router = useRouter()
   const { customerRegister, technicianRegister, isLoading } = useAuth()
+  const { profile, loading: authLoading } = useSupabaseAuth()
 
   const [userType, setUserType] = useState<UserType | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
@@ -57,6 +59,35 @@ export default function SignupPage() {
     experience: '',
     specialization: ''
   })
+
+  // Redirect authenticated users to appropriate page
+  useEffect(() => {
+    if (!authLoading && profile) {
+      console.log('User already authenticated, redirecting...', profile.role)
+      if (profile.role === 'TECHNICIAN') {
+        router.push('/technician/dashboard')
+      } else {
+        router.push('/')
+      }
+    }
+  }, [profile, authLoading, router])
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render signup form if user is authenticated
+  if (profile) {
+    return null
+  }
 
   const specializations = [
     'Computer Repair', 'Phone Repair', 'Software Installation',

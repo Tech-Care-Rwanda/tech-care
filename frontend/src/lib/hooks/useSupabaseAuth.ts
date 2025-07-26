@@ -66,10 +66,19 @@ export function useSupabaseAuth(): AuthState & AuthActions {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change:', event, session?.user?.id);
+
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (session?.user && !session.user.is_anonymous) {
+      if (event === 'SIGNED_OUT') {
+        // Explicitly clear all state on sign out
+        setProfile(null);
+        setUser(null);
+        setSession(null);
+        setLoading(false);
+        console.log('✅ Cleared auth state after sign out');
+      } else if (session?.user && !session.user.is_anonymous) {
         await fetchUserProfile(session.user.id);
       } else {
         setProfile(null);
@@ -189,7 +198,8 @@ export function useSupabaseAuth(): AuthState & AuthActions {
         }
 
         // Create user profile in database using UPSERT to handle existing records
-        const { data: insertedProfile, error: profileError } = await supabase
+        let insertedProfile = null;
+        const { data: insertedProfileData, error: profileError } = await supabase
           .from('users')
           .upsert(profileData, {
             onConflict: 'id',
@@ -198,67 +208,61 @@ export function useSupabaseAuth(): AuthState & AuthActions {
           .select()
           .single();
 
-        if (profileError) {
-          console.log('Profile creation/update error details:', profileError);
-          console.log('Additional error context:', {
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            code: profileError.code,
-            profileData: profileData,
-            fullError: JSON.stringify(profileError, null, 2),
-          });
+        insertedProfile = insertedProfileData;
 
-          // Try to clean up auth user if profile creation fails
-          try {
-            console.log('Attempting to sign out due to profile operation failure...');
-            await supabase.auth.signOut();
-          } catch (cleanupError) {
-            console.error('Cleanup error:', cleanupError);
+        // If email conflict, try updating by email instead
+        if (profileError && profileError.code === '23505' && profileError.message.includes('email')) {
+          console.log('Email conflict detected, trying update by email...');
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('users')
+            .update({
+              ...profileData,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('email', profileData.email)
+            .select()
+            .single();
+
+          if (updateError) {
+            throw updateError;
           }
-
-          // Provide more specific error messages based on error codes
-          let userFriendlyMessage = 'Profile operation failed. ';
-
-          if (profileError.code === '23502') {
-            userFriendlyMessage += 'Missing required information.';
-          } else if (profileError.code === '42501') {
-            userFriendlyMessage += 'Database permission error. Please contact support.';
-          } else {
-            userFriendlyMessage += profileError.message || 'Please try again.';
-          }
-
-          throw new Error(userFriendlyMessage);
+          insertedProfile = updatedProfile;
+        } else if (profileError) {
+          throw profileError;
         }
 
-        // For technicians, also create technician_details record
-        if (userData.role === 'TECHNICIAN') {
-          const technicianDetailsData = {
-            user_id: insertedProfile.id, // user_id in technician_details references users.id
-            gender: userData.gender,
-            age: userData.age,
-            date_of_birth: userData.date_of_birth,
-            experience: userData.experience || '',
-            specialization: userData.specialization || '',
-            is_available: true,
-            rate: 15000, // Default rate
-            created_at: now,
-            updated_at: now,
-          };
+        if (insertedProfile) {
+          // For technicians, also create technician_details record
+          if (userData.role === 'TECHNICIAN') {
+            const technicianDetailsData = {
+              user_id: insertedProfile.id, // user_id in technician_details references users.id
+              gender: userData.gender,
+              age: userData.age,
+              date_of_birth: userData.date_of_birth,
+              experience: userData.experience || '',
+              specialization: userData.specialization || '',
+              is_available: true,
+              rate: 15000, // Default rate
+              created_at: now,
+              updated_at: now,
+            };
 
-          const { error: techError } = await supabase
-            .from('technician_details')
-            .insert(technicianDetailsData);
+            const { error: techError } = await supabase
+              .from('technician_details')
+              .insert(technicianDetailsData);
 
-          if (techError) {
-            console.error('Error creating technician details:', techError);
-            // Don't fail the whole signup for this
+            if (techError) {
+              console.error('Error creating technician details:', techError);
+              // Don't fail the whole signup for this
+            }
           }
-        }
 
-        console.log('✅ Profile created successfully:', insertedProfile);
-        setProfile(insertedProfile);
-        return { success: true };
+          console.log('✅ Profile created successfully:', insertedProfile);
+          setProfile(insertedProfile);
+          return { success: true };
+        } else {
+          throw new Error('Failed to create user profile');
+        }
       } else {
         throw new Error('Failed to create user profile');
       }
@@ -298,10 +302,35 @@ export function useSupabaseAuth(): AuthState & AuthActions {
 
   // Sign out user
   const signOut = async () => {
-    setLoading(true);
-    await supabase.auth.signOut();
-    setProfile(null);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Clear all local state first
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+
+      console.log('✅ Successfully signed out');
+
+      // Force a page reload to clear any cached state
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Sign out failed:', error);
+      setError('Sign out failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Update user profile
