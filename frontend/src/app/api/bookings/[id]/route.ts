@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const bookingId = params.id
+    const bookingId = params?.id
     
     console.log('🔍 Fetching booking by ID:', bookingId)
 

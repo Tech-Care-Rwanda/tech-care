@@ -58,7 +58,7 @@ function DashboardPageContent() {
   
   // User data from authentication context
   const [user, setUser] = useState({
-    name: profile?.full_name || "User",
+    full_name: profile?.full_name,
     avatar: profile?.avatar_url,
     totalBookings: 0,
     memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01"
@@ -124,8 +124,8 @@ function DashboardPageContent() {
 
         setBookings(displayBookings)
         setUser(prev => ({ 
-          ...prev, 
-          name: profile?.full_name || "User",
+          ...prev,
+          full_name: profile?.full_name,
           avatar: profile?.avatar_url,
           memberSince: profile?.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : "2024-01",
           totalBookings: displayBookings.length 
@@ -335,12 +335,12 @@ function DashboardPageContent() {
             <div className="text-center">
               <SafeAvatar 
                 src={user.avatar} 
-                alt={user.name}
+                alt={user.full_name}
                 size="xl"
                 className="mx-auto mb-3"
               />
 
-              <h3 className="font-semibold text-gray-900 mb-1">{user.name}</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">{user.full_name}</h3>
               <p className="text-sm text-gray-600 mb-4">Member since {user.memberSince}</p>
 
               <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF2F2' }}>

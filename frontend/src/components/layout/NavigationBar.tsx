@@ -36,7 +36,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
 
   // Use actual user data from authentication context
   const user = profile ? {
-    name: profile.full_name || 'User',
+    full_name: profile.full_name,
     avatar: profile.avatar_url,
     initials: profile.full_name?.split(' ').map(n => n[0]).join('') || 'U',
     email: profile.email
@@ -84,7 +84,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
   // Role-based navigation items
   const getNavigationItems = () => {
     const baseItems = [
-      { href: '/', label: 'Find Technicians', icon: Home }
+      { href: '/', label: 'Find Technicians', icon: Home, badge: 1 }
     ]
 
     if (!profile) return baseItems
@@ -100,13 +100,13 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
         return [
           ...baseItems,
           { href: '/technician/dashboard', label: 'My Jobs', icon: Calendar, badge: pendingBookingsCount },
-          { href: '/dashboard', label: 'Find Jobs', icon: Search }
+          { href: '/dashboard', label: 'Find Jobs', icon: Search, badge: 1 }
         ]
       case 'ADMIN':
         return [
           ...baseItems,
           { href: '/admin/dashboard', label: 'Admin Panel', icon: Settings, badge: pendingBookingsCount },
-          { href: '/dashboard', label: 'Overview', icon: Calendar }
+          { href: '/dashboard', label: 'Overview', icon: Calendar, badge: 1 }
         ]
       default:
         return baseItems
@@ -190,7 +190,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                 >
                   <SafeAvatar 
                     src={user.avatar} 
-                    alt={user.name}
+                    alt={user.full_name}
                     fallback={user.initials}
                     size="sm"
                   />
@@ -201,7 +201,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                 {isProfileDropdownOpen && user && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                       {profile && (
                         <div className="mt-2">
@@ -210,9 +210,11 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
                             profile.role === 'TECHNICIAN' ? 'bg-green-100 text-green-800' :
                             'bg-purple-100 text-purple-800'
                           }`}>
-                            {profile.role === 'CUSTOMER' ? '👤 Customer' :
-                             profile.role === 'TECHNICIAN' ? '🔧 Technician' : 
-                             '👑 Admin'}
+                            {
+                              profile.role === 'ADMIN' ?
+                                '👑 Admin' : profile.role === 'TECHNICIAN' ?
+                                '🔧 Technician' : '👤 Customer'
+                            }
                           </span>
                         </div>
                       )}

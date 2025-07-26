@@ -119,16 +119,16 @@ export function Header({ userType = null, variant = "default" }: HeaderProps) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 hover:bg-accent">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
+                        <AvatarImage src={user?.avatar_url || "/placeholder-avatar.jpg"} />
                         <AvatarFallback>
-                          {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
+                          {user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="hidden lg:block text-left">
                         <p className={cn(
                           "text-sm font-medium",
                           variant === "transparent" ? "text-white" : "text-foreground"
-                        )}>{user?.name || "User"}</p>
+                        )}>{user?.full_name || "No name"}</p>
                         <p className={cn(
                           "text-xs capitalize",
                           variant === "transparent" ? "text-gray-200" : "text-muted-foreground"

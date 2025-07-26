@@ -79,7 +79,7 @@ export function useAvatarUrl(user?: { avatar_url?: string | null, full_name?: st
   }
 
   const getFallbackText = () => {
-    return user?.full_name || user?.email || 'User'
+    return user?.full_name || user?.email
   }
 
   return {

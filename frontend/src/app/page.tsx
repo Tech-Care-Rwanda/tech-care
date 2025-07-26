@@ -355,7 +355,7 @@ export default function Home() {
     if (profile) {
       // Authenticated user experience
       return {
-        title: `Welcome back, ${profile.full_name?.split(' ')[0] || 'User'}`,
+        title: `Welcome back, ${profile.full_name?.split(' ')[0]}`,
         subtitle: "Ready to book another service? Find verified tech experts in Kigali, Rwanda.",
         showAuthButtons: false,
         showDashboardLink: true

@@ -25,7 +25,7 @@ interface DashboardLayoutProps {
   children: React.ReactNode
   userType?: UserRole // Made optional, will use auth context
   userInfo?: {
-    name: string
+    full_name: string
     email: string
     avatar?: string
     status?: string
@@ -63,10 +63,10 @@ export function DashboardLayout({
   // Use auth context user role, fallback to prop
   const effectiveUserType = user?.role || userType
   const effectiveUserInfo = userInfo || {
-    name: user?.name || "User",
+    full_name: user?.full_name,
     email: user?.email || "",
     avatar: user?.avatar,
-    status: user?.status || "Active"
+    status: user?.is_active ? "Active" : "Inactive"
   }
 
   if (!isAuthenticated || !effectiveUserType) {
@@ -93,11 +93,11 @@ export function DashboardLayout({
         <Avatar>
           <AvatarImage src={effectiveUserInfo.avatar} />
           <AvatarFallback>
-            {effectiveUserInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            {effectiveUserInfo.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{effectiveUserInfo.name}</p>
+          <p className="text-sm font-medium truncate">{effectiveUserInfo.full_name}</p>
           <p className="text-xs text-muted-foreground truncate">{effectiveUserInfo.email}</p>
           <p className="text-xs text-red-600 capitalize font-medium">{effectiveUserType}</p>
         </div>
