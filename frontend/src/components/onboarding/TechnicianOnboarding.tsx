@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  CheckCircle, 
-  ArrowRight, 
-  Wrench, 
-  FileText, 
- 
+import {
+  CheckCircle,
+  ArrowRight,
+  Wrench,
+  FileText,
+
   DollarSign,
   Clock,
   X,
@@ -48,17 +48,6 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
   const [currentStep, setCurrentStep] = useState(0)
   const [dismissed, setDismissed] = useState(false)
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
-
-  // Check if technician should see onboarding
-  const shouldShowOnboarding = () => {
-    if (!profile || profile.role !== 'TECHNICIAN') return false
-    
-    // Show onboarding for new technicians (created within last 14 days)
-    const profileCreated = new Date(profile.created_at)
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    
-    return profileCreated > fourteenDaysAgo
-  }
 
   // Define technician onboarding steps
   const [steps, setSteps] = useState<OnboardingStep[]>([
@@ -122,13 +111,22 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
 
   // Simulate approval status check
   useEffect(() => {
+    const shouldShowOnboarding = () => {
+      if (!profile || profile.role !== 'TECHNICIAN') return false
+
+      const profileCreated = new Date(profile.created_at)
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+
+      return profileCreated > fourteenDaysAgo
+    }
+
     if (profile && shouldShowOnboarding()) {
       // In real implementation, this would check the technician's approval status from the database
       // For now, we'll simulate different states
       const mockApprovalCheck = setTimeout(() => {
         setApprovalStatus('approved') // or 'rejected' for demo
-        setSteps(prev => prev.map(step => 
-          step.id === 'approval' 
+        setSteps(prev => prev.map(step =>
+          step.id === 'approval'
             ? { ...step, completed: true, status: 'approved' }
             : step
         ))
@@ -147,15 +145,26 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
     if (step.action?.onClick) {
       step.action.onClick()
     }
-    
+
     // Mark current step as completed and advance
-    setSteps(prev => prev.map((s) => 
+    setSteps(prev => prev.map((s) =>
       s.id === step.id ? { ...s, completed: true } : s
     ))
   }
 
   // Don't show if dismissed or user doesn't need onboarding
-  if (dismissed || !shouldShowOnboarding()) {
+  if (dismissed) {
+    return null
+  }
+
+  const shouldShow = () => {
+    if (!profile || profile.role !== 'TECHNICIAN') return false
+    const profileCreated = new Date(profile.created_at)
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    return profileCreated > fourteenDaysAgo
+  }
+
+  if (!shouldShow()) {
     return null
   }
 
@@ -198,13 +207,12 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
 
         {/* Approval Status Banner */}
         {currentStep === 2 && (
-          <div className={`mb-4 p-3 rounded-lg border ${
-            approvalStatus === 'approved' 
-              ? 'bg-green-50 border-green-200' 
-              : approvalStatus === 'rejected'
-                ? 'bg-red-50 border-red-200'
-                : 'bg-yellow-50 border-yellow-200'
-          }`}>
+          <div className={`mb-4 p-3 rounded-lg border ${approvalStatus === 'approved'
+            ? 'bg-green-50 border-green-200'
+            : approvalStatus === 'rejected'
+              ? 'bg-red-50 border-red-200'
+              : 'bg-yellow-50 border-yellow-200'
+            }`}>
             <div className="flex items-center space-x-2">
               {approvalStatus === 'approved' ? (
                 <CheckCircle className="w-5 h-5 text-green-600" />
@@ -235,8 +243,8 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
             <span>{completedSteps} of {steps.length} completed</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+            <div
+              className="bg-green-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -245,13 +253,12 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
         {/* Current Step */}
         <div className="mb-6">
           <div className="flex items-start space-x-4">
-            <div className={`p-3 rounded-full ${
-              currentStepData.completed 
-                ? 'bg-green-100' 
-                : currentStepData.status === 'rejected'
-                  ? 'bg-red-100'
-                  : 'bg-green-100'
-            }`}>
+            <div className={`p-3 rounded-full ${currentStepData.completed
+              ? 'bg-green-100'
+              : currentStepData.status === 'rejected'
+                ? 'bg-red-100'
+                : 'bg-green-100'
+              }`}>
               {currentStepData.completed ? (
                 <CheckCircle className="w-6 h-6 text-green-600" />
               ) : currentStepData.status === 'rejected' ? (
@@ -267,13 +274,13 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
               <p className="text-gray-600 mb-4">
                 {currentStepData.description}
               </p>
-              
+
               {currentStepData.action && (
                 <div className="flex items-center space-x-3">
                   {currentStepData.action.href ? (
-                    <Button 
-                      asChild 
-                      className="text-white hover:opacity-90" 
+                    <Button
+                      asChild
+                      className="text-white hover:opacity-90"
                       style={{ backgroundColor: '#10B981' }}
                     >
                       <Link href={currentStepData.action.href}>
@@ -282,9 +289,9 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
                       </Link>
                     </Button>
                   ) : (
-                    <Button 
+                    <Button
                       onClick={() => handleStepAction(currentStepData)}
-                      className="text-white hover:opacity-90" 
+                      className="text-white hover:opacity-90"
                       style={{ backgroundColor: '#10B981' }}
                       disabled={currentStepData.id === 'approval' && approvalStatus === 'pending'}
                     >
@@ -292,10 +299,10 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   )}
-                  
+
                   {currentStep < steps.length - 1 && currentStepData.id !== 'approval' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
                     >
                       Skip Step
@@ -334,24 +341,23 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
               <button
                 key={step.id}
                 onClick={() => setCurrentStep(index)}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  step.completed 
-                    ? 'bg-green-500' 
-                    : step.status === 'rejected'
-                      ? 'bg-red-500'
-                      : index === currentStep 
-                        ? 'bg-green-500' 
-                        : 'bg-gray-300'
-                }`}
+                className={`w-3 h-3 rounded-full transition-colors ${step.completed
+                  ? 'bg-green-500'
+                  : step.status === 'rejected'
+                    ? 'bg-red-500'
+                    : index === currentStep
+                      ? 'bg-green-500'
+                      : 'bg-gray-300'
+                  }`}
                 title={step.title}
               />
             ))}
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {currentStep > 0 && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setCurrentStep(prev => Math.max(prev - 1, 0))}
               >
@@ -359,10 +365,10 @@ export function TechnicianOnboarding({ onDismiss, className }: TechnicianOnboard
               </Button>
             )}
             {currentStep < steps.length - 1 && currentStepData.id !== 'approval' && (
-              <Button 
+              <Button
                 size="sm"
                 onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
-                className="text-white hover:opacity-90" 
+                className="text-white hover:opacity-90"
                 style={{ backgroundColor: '#10B981' }}
               >
                 Next
@@ -386,7 +392,7 @@ export function useTechnicianOnboarding() {
     if (profile && profile.role === 'TECHNICIAN') {
       const profileCreated = new Date(profile.created_at)
       const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-      
+
       setOnboardingVisible(profileCreated > fourteenDaysAgo)
     }
   }, [profile])

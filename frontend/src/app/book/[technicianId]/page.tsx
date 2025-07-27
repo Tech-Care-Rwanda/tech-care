@@ -19,6 +19,8 @@ import {
     CreditCard
 } from 'lucide-react'
 import { supabaseService, TechnicianDetails } from '@/lib/supabase'
+import { supabaseBookingService } from '@/lib/services/supabaseBookingService'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import Link from 'next/link'
 
 interface BookingFormData {
@@ -38,6 +40,9 @@ export default function BookTechnicianPage() {
     const router = useRouter()
     const params = useParams()
     const technicianId = params.technicianId as string
+
+    // Get authenticated user
+    const { profile, loading: authLoading } = useSupabaseAuth()
 
     const [technician, setTechnician] = useState<TechnicianDetails | null>(null)
     const [loading, setLoading] = useState(true)
@@ -76,7 +81,7 @@ export default function BookTechnicianPage() {
                 const technicianData = await supabaseService.getTechnicianById(technicianId)
 
                 console.log('Received technician data:', technicianData)
-                setTechnician(technicianData)
+                setTechnician(technicianData as TechnicianDetails)
 
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -202,25 +207,27 @@ export default function BookTechnicianPage() {
 
             // Get selected service details
             const serviceOptions = getServiceOptions()
-            console.log('Available service options:', serviceOptions)
-            console.log('Selected service ID:', formData.serviceId)
-
             const selectedService = serviceOptions.find(s => s.id === Number(formData.serviceId))
-            console.log('Found selected service:', selectedService)
 
             if (!selectedService) {
-                console.error('Service selection failed:', {
-                    serviceId: formData.serviceId,
-                    availableServices: serviceOptions,
-                    technician: technician
-                })
-                throw new Error(`Please select a valid service. Available services: ${serviceOptions.map(s => `${s.id}: ${s.name}`).join(', ')}`)
+                throw new Error(`Please select a valid service.`)
             }
 
-            // Create booking data using the clean service
+            // Validate user is authenticated
+            if (!profile?.id) {
+                throw new Error('You must be logged in to book a service. Please login and try again.');
+            }
+
+            // Get the correct technician_details.id
+            const technicianDetailsId = technician?.id
+            if (!technicianDetailsId) {
+                throw new Error("Could not find technician details ID.")
+            }
+
+            // Create booking data using the authenticated user and correct technician ID
             const bookingData = {
-                customer_id: "550e8400-e29b-41d4-a716-446655440011", // Test Customer UUID
-                technician_id: technician?.user_id || technician?.id || technicianId, // user_id is correct for technician_details
+                customer_id: profile.id,
+                technician_id: technicianDetailsId,
                 service_id: Number(formData.serviceId),
                 service_type: selectedService.name,
                 problem_description: formData.customerNotes.trim() || selectedService.description,
@@ -228,33 +235,17 @@ export default function BookTechnicianPage() {
                 price_rwf: selectedService.price,
                 duration: formData.duration,
                 scheduled_date: `${formData.scheduledDate}T${formData.scheduledTime}:00`,
-                customer_notes: formData.customerNotes.trim() || null,
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
+                customer_notes: formData.customerNotes.trim() || '',
             }
 
-            console.log('Creating booking with clean service:', bookingData)
+            console.log('Creating booking with supabaseBookingService:', bookingData)
 
-            // Create booking via API endpoint
-            const response = await fetch('/api/bookings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(bookingData)
-            })
+            const newBooking = await supabaseBookingService.createBooking(bookingData);
 
-            const result = await response.json()
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Failed to create booking')
-            }
-
-            console.log('✅ Booking created successfully:', result.booking)
+            console.log('✅ Booking created successfully:', newBooking)
 
             // Redirect to confirmation page
-            router.push(`/book/confirmation?bookingId=${result.booking.id}`)
+            router.push(`/book/confirmation?bookingId=${newBooking.id}`)
 
         } catch (error) {
             console.error('Error creating booking:', error)

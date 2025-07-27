@@ -96,8 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const getUserRole = (): 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN' | null => {
-    if (!supabaseAuth.profile) return null
-    return supabaseAuth.profile.role.toLowerCase() as 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'
+    if (!supabaseAuth.profile?.role) {
+      return null;
+    }
+    return supabaseAuth.profile.role;
   }
 
   // Debug logging for authentication state

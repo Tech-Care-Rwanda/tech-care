@@ -18,17 +18,20 @@ export default function LoginPage() {
     rememberMe: false
   })
 
-  // Redirect authenticated users to their appropriate dashboard
+  // Redirect based on user role after successful login
   useEffect(() => {
-    if (isAuthenticated && user && isHydrated) {
-      const roleRedirects = {
-        CUSTOMER: '/dashboard',
-        TECHNICIAN: '/technician/dashboard',
-        ADMIN: '/admin/dashboard'
+    if (isAuthenticated && user && !isLoading) {
+      console.log('User authenticated, redirecting...', user.role)
+
+      // Redirect based on role
+      if (user.role === 'TECHNICIAN') {
+        router.push('/technician/dashboard')
+      } else {
+        // Customers go to homepage to find technicians, not bookings
+        router.push('/')
       }
-      router.push(roleRedirects[user.role] || '/dashboard')
     }
-  }, [isAuthenticated, user, router, isHydrated])
+  }, [isAuthenticated, user, isLoading, router])
 
   const togglePassword = () => {
     setShowPassword(!showPassword)

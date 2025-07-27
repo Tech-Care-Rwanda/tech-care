@@ -31,7 +31,7 @@ import {
     AlertCircle,
     Navigation
 } from 'lucide-react'
-import { useTechnicianBookings, useTechnicianProfile } from '@/lib/hooks/useTechnicianDashboard'
+import { useTechnicianBookings, useTechnicianProfile, useTechnicianStats } from '@/lib/hooks/useTechnicianDashboard'
 import type { TechnicianBooking } from '@/lib/hooks/useTechnicianDashboard'
 
 const EMERGENCY_NUMBER = "+250791995143"
@@ -71,9 +71,10 @@ const URGENCY_CONFIG = {
 }
 
 function TechnicianDashboardContent() {
-    const { bookings, loading, error, fetchBookings, updateBookingStatus } = useTechnicianBookings()
-    const { updateAvailability } = useTechnicianProfile()
     const { profile, loading: authLoading } = useSupabaseAuth()
+    const { bookings, loading, error, fetchBookings, updateBookingStatus } = useTechnicianBookings(profile?.id || null)
+    const { profile: techProfile, updateAvailability } = useTechnicianProfile()
+    const { stats: technicianStats, loading: statsLoading } = useTechnicianStats(profile?.id || null)
     const [isAvailable, setIsAvailable] = useState(true)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [updatingAvailability, setUpdatingAvailability] = useState(false)
@@ -85,8 +86,8 @@ function TechnicianDashboardContent() {
             console.error('User is not a technician')
             return
         }
-        fetchBookings(profile.id)
-    }, [profile, authLoading, fetchBookings])
+        // Bookings are automatically fetched by the hook
+    }, [profile, authLoading])
 
     // Use actual technician profile data from authentication context
     const technicianProfile = profile ? {
@@ -94,13 +95,10 @@ function TechnicianDashboardContent() {
         name: profile.full_name || 'Technician',
         avatar: profile.avatar_url,
         specialization: 'Technical Service', // Could be expanded with technician_details
-        rating: 4.8, // TODO: Calculate from reviews
-        totalJobs: 142, // TODO: Calculate from bookings
-        monthlyEarnings: 85000, // TODO: Calculate from completed bookings
-        joinDate: profile.created_at ? new Date(profile.created_at).toISOString().slice(0, 7) : '2024-01',
-        phone: profile.phone_number || '',
-        location: 'Rwanda', // TODO: Add location to profile
-        certifications: [] // TODO: Add from technician_details
+        rating: technicianStats?.rating || 0,
+        totalJobs: technicianStats?.completedJobs || 0,
+        monthlyEarnings: technicianStats?.monthlyEarnings || 0,
+        isAvailable: techProfile?.isAvailable ?? true
     } : null
 
     const handleCall = (phoneNumber?: string) => {
@@ -115,14 +113,14 @@ function TechnicianDashboardContent() {
         try {
             setUpdatingAvailability(true)
             setIsAvailable(newAvailability) // Optimistic update for immediate UI feedback
-            
+
             if (!profile) return
             const result = await updateAvailability(profile.id, newAvailability)
-            
+
             if (result.warning) {
                 console.warn('Availability update warning:', result.warning)
             }
-            
+
         } catch (error) {
             console.error('Failed to update availability:', error)
             // Revert optimistic update on error
@@ -160,9 +158,12 @@ function TechnicianDashboardContent() {
             if (result.success) {
                 // Optionally show success toast
                 console.log(`Booking ${action}ed successfully`)
+                if (result.warning) {
+                    console.warn('Update warning:', result.warning)
+                }
             } else {
-                console.error('Failed to update booking:', result.error)
-                alert(`Failed to ${action} booking: ${result.error}`)
+                console.error('Failed to update booking')
+                alert(`Failed to ${action} booking`)
             }
         } catch (err) {
             console.error('Error updating booking:', err)
@@ -248,7 +249,7 @@ function TechnicianDashboardContent() {
                         </div>
                         <Button
                             variant="outline"
-                            onClick={() => profile && fetchBookings(profile.id)}
+                            onClick={() => fetchBookings()}
                             disabled={loading}
                         >
                             <Navigation className="w-4 h-4 mr-2" />
@@ -262,53 +263,52 @@ function TechnicianDashboardContent() {
                 {/* Main Content */}
                 <div className="lg:col-span-3 space-y-6">
                     {/* Stats Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Active Jobs</p>
-                                    <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>
-                                        {confirmedBookings.length}
-                                    </p>
-                                </div>
-                                <Wrench className="h-8 w-8 text-gray-400" />
-                            </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
+                                <Wrench className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{todayBookings.length}</div>
+                                <p className="text-xs text-muted-foreground">Jobs scheduled for today</p>
+                            </CardContent>
                         </Card>
-
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Today&apos;s Jobs</p>
-                                    <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>
-                                        {todayBookings.length}
-                                    </p>
-                                </div>
-                                <Calendar className="h-8 w-8 text-gray-400" />
-                            </div>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Today's Jobs</CardTitle>
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{todayBookings.length}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    {confirmedBookings.length} confirmed
+                                </p>
+                            </CardContent>
                         </Card>
-
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
-                                    <p className="text-lg font-bold" style={{ color: '#FF385C' }}>
-                                        {technicianProfile ? formatCurrency(technicianProfile.monthlyEarnings) : 'N/A'}
-                                    </p>
-                                </div>
-                                <DollarSign className="h-8 w-8 text-gray-400" />
-                            </div>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Monthly Earnings</CardTitle>
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{formatCurrency(technicianStats?.monthlyEarnings || 0)}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    Based on completed jobs
+                                </p>
+                            </CardContent>
                         </Card>
-
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Rating</p>
-                                    <p className="text-2xl font-bold" style={{ color: '#FF385C' }}>
-                                        {technicianProfile ? `${technicianProfile.rating}/5` : 'N/A'}
-                                    </p>
-                                </div>
-                                <TrendingUp className="h-8 w-8 text-gray-400" />
-                            </div>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Rating</CardTitle>
+                                <Star className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{technicianStats?.rating.toFixed(1) || 'N/A'}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    from {technicianStats?.totalReviews || 0} reviews
+                                </p>
+                            </CardContent>
                         </Card>
                     </div>
 
@@ -334,7 +334,7 @@ function TechnicianDashboardContent() {
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading requests</h3>
                                     <p className="text-gray-600 mb-4">{error}</p>
                                     <Button
-                                        onClick={() => profile && fetchBookings(profile.id)}
+                                        onClick={() => fetchBookings()}
                                         className="text-white hover:opacity-90"
                                         style={{ backgroundColor: '#FF385C' }}
                                     >
@@ -353,8 +353,8 @@ function TechnicianDashboardContent() {
                                         <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start space-x-4">
-                                                    <SafeAvatar 
-                                                        src={booking.customer.image} 
+                                                    <SafeAvatar
+                                                        src={booking.customer.image}
                                                         alt={booking.customer.name}
                                                         size="lg"
                                                     />
@@ -455,58 +455,30 @@ function TechnicianDashboardContent() {
                 {/* Sidebar */}
                 <div className="space-y-6">
                     {/* Profile Summary */}
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="text-center">
-                                {technicianProfile && (
-                                    <>
-                                        <SafeAvatar 
-                                            src={technicianProfile.avatar} 
-                                            alt={technicianProfile.name}
-                                            size="xl"
-                                            className="mx-auto mb-3"
-                                        />
-
-                                        <h3 className="font-semibold text-gray-900 mb-1">{technicianProfile.name}</h3>
-                                        <p className="text-sm text-gray-600 mb-2">{technicianProfile.specialization}</p>
-
-                                        <div className="flex items-center justify-center space-x-1 mb-3">
-                                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                            <span className="text-sm font-medium">{technicianProfile.rating}</span>
-                                            <span className="text-sm text-gray-500">({technicianProfile.totalJobs} jobs)</span>
-                                        </div>
-
-                                        <div className="p-3 rounded-lg bg-red-50">
-                                            <p className="text-lg font-bold text-red-600">{formatCurrency(technicianProfile.monthlyEarnings)}</p>
-                                            <p className="text-sm text-red-700">This Month</p>
-                                        </div>
-                                    </>
-                                )}
+                    <Card className="lg:col-span-1">
+                        <CardHeader className="text-center">
+                            <SafeAvatar
+                                src={technicianProfile?.avatar}
+                                fallback={technicianProfile?.name?.[0] || 'T'}
+                                className="w-24 h-24 mx-auto mb-4"
+                            />
+                            <CardTitle>{technicianProfile?.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground">{technicianProfile?.specialization}</p>
+                            <div className="flex items-center justify-center space-x-2 mt-2">
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                <span className="text-sm font-medium">{technicianProfile?.rating.toFixed(1)}</span>
+                                <span className="text-sm text-muted-foreground">({technicianProfile?.totalJobs} jobs)</span>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="text-center space-y-4">
+                            <div>
+                                <h4 className="font-semibold text-sm mb-2">This Month</h4>
+                                <p className="text-2xl font-bold text-green-600">{formatCurrency(technicianProfile?.monthlyEarnings || 0)}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Availability Status */}
-                    <Card className={`border-2 ${isAvailable ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className={`font-semibold ${isAvailable ? 'text-green-800' : 'text-orange-800'}`}>
-                                    {isAvailable ? 'Available' : 'Unavailable'}
-                                </h3>
-                                <Switch
-                                    checked={isAvailable}
-                                    onCheckedChange={handleAvailabilityChange}
-                                    disabled={updatingAvailability}
-                                />
-                            </div>
-                            <p className={`text-sm ${isAvailable ? 'text-green-700' : 'text-orange-700'}`}>
-                                {isAvailable
-                                    ? 'You are currently available for new bookings'
-                                    : 'You are not accepting new bookings'
-                                }
-                            </p>
-                        </CardContent>
-                    </Card>
+                    {/* Availability Status - Removed duplicate here since we have one in header */}
                 </div>
             </div>
         </div>
@@ -516,7 +488,7 @@ function TechnicianDashboardContent() {
 export default function TechnicianDashboardPage() {
     return (
         <TechnicianRoute>
-            <DashboardLayout userType="technician">
+            <DashboardLayout userType="TECHNICIAN">
                 <TechnicianDashboardContent />
             </DashboardLayout>
         </TechnicianRoute>

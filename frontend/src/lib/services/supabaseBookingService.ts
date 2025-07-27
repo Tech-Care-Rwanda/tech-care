@@ -37,7 +37,7 @@ export interface BookingResponse {
 }
 
 class SupabaseBookingService {
-  
+
   /**
    * Validate that all required foreign keys exist before creating booking
    * Made optional due to RLS policies potentially blocking access
@@ -120,16 +120,16 @@ class SupabaseBookingService {
 
       if (error) {
         console.error('❌ Booking creation failed:', error)
-        
+
         // Handle specific error types with detailed guidance
         if (error.message.includes('violates foreign key constraint')) {
           const tableMatch = error.message.match(/Key \(([^)]+)\)=\([^)]+\) is not present in table "([^"]+)"/)
           const constraintMatch = error.message.match(/violates foreign key constraint "([^"]+)"/)
-          
+
           if (tableMatch) {
             const [, key, table] = tableMatch
             const constraint = constraintMatch ? constraintMatch[1] : 'unknown'
-            
+
             if (key.includes('technician_id')) {
               throw new Error(`❌ TECHNICIAN ID ERROR: '${bookingData.technician_id}' not found in ${table} table.
 
@@ -142,23 +142,23 @@ Available from our test:
 - technician_details.id: 660e8400-e29b-41d4-a716-446655440001
 - corresponding user_id: 550e8400-e29b-41d4-a716-446655440001`)
             }
-            
+
             throw new Error(`❌ FOREIGN KEY ERROR: ${key} = '${key.includes('customer') ? bookingData.customer_id : key.includes('service') ? bookingData.service_id : 'unknown'}' not found in ${table} table`)
           }
-          
+
           throw new Error(`❌ FOREIGN KEY CONSTRAINT: ${error.message}`)
         }
-        
+
         if (error.message.includes('row-level security policy')) {
           throw new Error('Permission denied. Please enable anonymous bookings in your database security settings.')
         }
-        
+
         if (error.message.includes('violates not-null constraint')) {
           const fieldMatch = error.message.match(/null value in column "([^"]+)"/)
           const field = fieldMatch ? fieldMatch[1] : 'unknown field'
           throw new Error(`Missing required field: ${field}`)
         }
-        
+
         throw new Error(`Database error: ${error.message}`)
       }
 
@@ -167,6 +167,33 @@ Available from our test:
 
     } catch (error) {
       console.error('💥 Booking creation error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get a single booking by its ID
+   */
+  async getBookingById(bookingId: string): Promise<BookingResponse> {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single()
+
+      if (error) {
+        console.error(`Error fetching booking ${bookingId}:`, error)
+        throw new Error(`Could not find booking with ID ${bookingId}.`)
+      }
+
+      if (!data) {
+        throw new Error(`No booking found with ID ${bookingId}.`)
+      }
+
+      return data as BookingResponse
+    } catch (error) {
+      console.error('💥 Get booking by ID error:', error)
       throw error
     }
   }

@@ -13,7 +13,7 @@ import {
     ArrowRight,
     Home
 } from 'lucide-react'
-import { Booking } from '@/lib/supabase'
+import { BookingResponse as Booking, supabaseBookingService } from '@/lib/services/supabaseBookingService'
 import Link from 'next/link'
 
 export default function BookingConfirmationPage() {
@@ -36,22 +36,17 @@ export default function BookingConfirmationPage() {
                 setLoading(true)
                 console.log('Fetching booking:', bookingId)
 
-                // Fetch booking via API endpoint
-                const response = await fetch(`/api/bookings/${bookingId}`)
-                const result = await response.json()
+                // Fetch booking via Supabase service
+                const bookingData = await supabaseBookingService.getBookingById(bookingId)
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.error || 'Failed to fetch booking')
-                }
-
-                console.log('✅ Booking fetched via API:', result.booking)
-                setBooking(result.booking)
-                setLoading(false)
+                console.log('✅ Booking fetched via Supabase:', bookingData)
+                setBooking(bookingData)
 
             } catch (error) {
                 console.error('Error fetching booking:', error)
                 const errorMessage = error instanceof Error ? error.message : 'Failed to load booking details'
                 setError(errorMessage)
+            } finally {
                 setLoading(false)
             }
         }
@@ -161,21 +156,21 @@ export default function BookingConfirmationPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Total Cost</p>
-                                <p className="font-medium">RWF {booking.total_price}</p>
+                                <p className="font-medium">RWF {booking.price_rwf}</p>
                             </div>
                         </div>
 
-                                    {booking.customer_notes && (
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-gray-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Notes</p>
-                  <p className="font-medium">{booking.customer_notes}</p>
-                </div>
-              </div>
-            )}
+                        {booking.customer_notes && (
+                            <div className="flex items-start space-x-3">
+                                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <MessageSquare className="w-4 h-4 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Notes</p>
+                                    <p className="font-medium">{booking.customer_notes}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Card>
 

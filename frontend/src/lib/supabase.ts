@@ -163,193 +163,143 @@ export const supabaseService = {
 
   // Technicians
   async getTechnicians(approved = true) {
-    // First, try a simple query without joins to test basic connection
-    console.log('Attempting to fetch technicians from Supabase...')
+    console.log('🔍 Fetching technicians from Supabase...');
 
     try {
       // Check if Supabase is properly configured
       if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase is not configured. Check your environment variables.')
+        throw new Error('Supabase is not configured. Check your environment variables.');
       }
 
-      let query = supabase
+      console.log('✅ Supabase configuration verified');
+
+      // First, get all users with role 'TECHNICIAN' 
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'TECHNICIAN')
+        .eq('is_active', true);
+
+      if (userError) {
+        console.error('❌ Error fetching technician users:', userError);
+        throw userError;
+      }
+
+      console.log(`✅ Found ${users?.length || 0} technician users`);
+
+      if (!users || users.length === 0) {
+        console.log('⚠️ No technician users found');
+        return [];
+      }
+
+      // Then get their technician details
+      const { data: technicianDetails, error: detailsError } = await supabase
         .from('technician_details')
         .select('*')
+        .in('user_id', users.map(u => u.id));
 
-      // Don't filter by approval_status since I don't see it in your screenshot
-      // if (approved) {
-      //   query = query.eq('approval_status', 'APPROVED')
-      // }
-
-      const { data, error } = await query
-      if (error) {
-        console.error('Supabase error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        throw new Error(`Database access error: ${error.message}`)
-      }
-      console.log('Supabase raw data:', data)
-
-      // Now try to get the users data separately for each technician
-      if (data && data.length > 0) {
-        const techniciansWithUsers = await Promise.all(
-          data.map(async (tech) => {
-            try {
-              const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', tech.user_id)
-                .single()
-
-              return {
-                ...tech,
-                user: userError ? null : userData
-              }
-            } catch (err) {
-              console.log('Could not fetch user for technician:', tech.id)
-              return {
-                ...tech,
-                user: null
-              }
-            }
-          })
-        )
-        console.log('Technicians with user data:', techniciansWithUsers)
-        return techniciansWithUsers as TechnicianDetails[]
+      if (detailsError) {
+        console.error('❌ Error fetching technician details:', detailsError);
+        throw detailsError;
       }
 
-      return data as TechnicianDetails[]
+      console.log(`✅ Found ${technicianDetails?.length || 0} technician detail records`);
 
-    } catch (err) {
-      console.error('Unexpected error in getTechnicians:', {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        error: err
-      })
-      throw err
+      // Combine user data with technician details
+      const technicians = users.map(user => {
+        const details = technicianDetails?.find(td => td.user_id === user.id);
+        return {
+          id: user.id, // Always use user.id for consistency with getTechnicianById
+          user_id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          phone_number: user.phone_number,
+          specialization: details?.specialization || 'General Tech Support',
+          experience: details?.experience || 'Experienced technician',
+          gender: details?.gender,
+          age: details?.age,
+          date_of_birth: details?.date_of_birth,
+          image_url: details?.image_url,
+          rate: details?.rate || 15000,
+          is_available: details?.is_available ?? true,
+          rating: 4.5, // Default rating until we have reviews
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        };
+      });
+
+      console.log(`✅ Successfully processed ${technicians.length} technicians`);
+      return technicians;
+
+    } catch (error) {
+      console.error('💥 Critical error in getTechnicians:', error);
+      throw error;
     }
   },
 
+  // Get single technician by ID
   async getTechnicianById(id: string) {
-    console.log('Fetching technician by ID:', id)
+    console.log('🔍 Fetching technician by ID:', id);
 
     try {
-      // Check if Supabase is properly configured
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase is not configured. Check your environment variables.')
-      }
-
-      // First, test if we can access the table at all
-      console.log('Testing table access...')
-      const { data: testData, error: testError } = await supabase
-        .from('technician_details')
-        .select('id, specialization')
-        .limit(1)
-
-      if (testError) {
-        console.error('Cannot access technician_details table:', {
-          message: testError.message,
-          details: testError.details,
-          hint: testError.hint,
-          code: testError.code
-        })
-        throw new Error(`Database access error: ${testError.message}`)
-      } else {
-        console.log('Table access OK. Sample data:', testData)
-      }
-
-      // Try to get technician by technician_details.id first
-      console.log('Searching by technician_details.id:', id)
-      let { data: techData, error: techError } = await supabase
-        .from('technician_details')
+      // First, get the user record
+      const { data: userData, error: userError } = await supabase
+        .from('users')
         .select('*')
         .eq('id', id)
-        .single()
+        .eq('role', 'TECHNICIAN')
+        .eq('is_active', true)
+        .single();
 
-      // If not found, try searching by user_id
-      if (techError && techError.code === 'PGRST116') {
-        console.log('Not found by technician_details.id, trying user_id:', id)
-        const { data: techDataByUserId, error: userIdError } = await supabase
-          .from('technician_details')
-          .select('*')
-          .eq('user_id', id)
-          .single()
-
-        if (userIdError) {
-          console.log('Also not found by user_id. Original error:', techError)
-          throw new Error(`Technician with ID ${id} not found`)
-        }
-
-        techData = techDataByUserId
-        techError = null
-        console.log('Found technician by user_id:', techData)
+      if (userError) {
+        console.error('❌ Error fetching technician user:', userError);
+        throw new Error(`Technician with ID ${id} not found`);
       }
 
-      if (techError) {
-        console.error('Error fetching technician:', {
-          message: techError.message,
-          details: techError.details,
-          hint: techError.hint,
-          code: techError.code
-        })
+      console.log('✅ Found technician user:', userData);
 
-        if (techError.code === 'PGRST116') {
-          throw new Error(`Technician with ID ${id} not found`)
-        }
+      // Then get technician details if they exist
+      const { data: techDetails, error: detailsError } = await supabase
+        .from('technician_details')
+        .select('*')
+        .eq('user_id', id)
+        .single();
 
-        throw new Error(`Database error: ${techError.message}`)
+      // Don't throw error if no details - just use defaults
+      if (detailsError && detailsError.code !== 'PGRST116') {
+        console.warn('⚠️ Error fetching technician details (non-fatal):', detailsError);
       }
 
-      console.log('Successfully fetched technician data:', techData)
+      console.log('ℹ️ Technician details:', techDetails || 'No details found');
 
-      // Then get user data separately if user_id exists
-      if (techData && techData.user_id) {
-        console.log('Fetching user data for user_id:', techData.user_id)
+      // Combine user data with technician details
+      const technician = {
+        id: userData.id,
+        user_id: userData.id,
+        full_name: userData.full_name,
+        email: userData.email,
+        phone_number: userData.phone_number,
+        specialization: techDetails?.specialization || 'General Tech Support',
+        experience: techDetails?.experience || 'Experienced technician',
+        gender: techDetails?.gender,
+        age: techDetails?.age,
+        date_of_birth: techDetails?.date_of_birth,
+        image_url: techDetails?.image_url,
+        certificate_url: techDetails?.certificate_url,
+        approval_status: techDetails?.approval_status || 'APPROVED', // Add missing property
+        rate: techDetails?.rate || 15000,
+        is_available: techDetails?.is_available ?? true,
+        rating: 4.5, // Default rating until we have reviews
+        created_at: userData.created_at,
+        updated_at: userData.updated_at
+      };
 
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', techData.user_id)
-          .single()
+      console.log('✅ Successfully processed technician data:', technician);
+      return technician;
 
-        if (userError && userError.code !== 'PGRST116') {
-          console.log('Error fetching user data:', {
-            message: userError.message,
-            details: userError.details,
-            hint: userError.hint,
-            code: userError.code
-          })
-        }
-
-        console.log('User data result:', userData)
-        return {
-          ...techData,
-          user: userData || null
-        } as TechnicianDetails
-      }
-
-      console.log('No user_id found, returning technician data only')
-      return {
-        ...techData,
-        user: null
-      } as TechnicianDetails
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      const errorStack = err instanceof Error ? err.stack : undefined
-
-      console.error('Unexpected error in getTechnicianById:', {
-        message: errorMessage,
-        stack: errorStack,
-        error: err,
-        originalError: JSON.stringify(err)
-      })
-
-      // Create a new error with proper message
-      throw new Error(`Failed to fetch technician: ${errorMessage}`)
+    } catch (error) {
+      console.error('💥 Critical error in getTechnicianById:', error);
+      throw error;
     }
   },
 
@@ -390,6 +340,30 @@ export const supabaseService = {
     console.log('Booking data values:', Object.values(bookingData))
 
     try {
+      // Convert users.id to technician_details.id if needed
+      console.log('Converting technician ID from users.id to technician_details.id...')
+      const { data: techDetails, error: techLookupError } = await supabase
+        .from('technician_details')
+        .select('id')
+        .eq('user_id', bookingData.technician_id)
+        .single()
+
+      if (techLookupError || !techDetails) {
+        console.error('❌ Failed to find technician_details for user_id:', bookingData.technician_id)
+        throw new Error(`Technician with user ID ${bookingData.technician_id} not found in technician_details table`)
+      }
+
+      // Update booking data with correct technician_details.id
+      const updatedBookingData = {
+        ...bookingData,
+        technician_id: techDetails.id
+      }
+
+      console.log('✅ Converted technician ID:', {
+        original_user_id: bookingData.technician_id,
+        technician_details_id: techDetails.id
+      })
+
       // Ensure anonymous authentication is enabled
       const { data: { user }, error: authError } = await supabase.auth.signInAnonymously()
 
@@ -421,12 +395,12 @@ export const supabaseService = {
       const { data: techTest, error: techTestError } = await supabase
         .from('technician_details')
         .select('id, user_id, specialization')
-        .eq('id', bookingData.technician_id)
+        .eq('id', updatedBookingData.technician_id)
         .single()
 
       if (techTestError) {
         console.log('❌ Technician verification error:', techTestError)
-        console.log('Technician ID being searched:', bookingData.technician_id)
+        console.log('Technician ID being searched:', updatedBookingData.technician_id)
         console.log('This explains the foreign key constraint error!')
       } else {
         console.log('✅ Technician found in technician_details table:', techTest)
@@ -436,7 +410,7 @@ export const supabaseService = {
       // Now attempt to create the booking with anonymous user context
       const { data, error } = await supabase
         .from('bookings')
-        .insert(bookingData)
+        .insert(updatedBookingData)
         .select()
         .single()
 
@@ -446,7 +420,7 @@ export const supabaseService = {
         console.error('Error details:', error.details)
         console.error('Error hint:', error.hint)
         console.error('Error code:', error.code)
-        console.error('Booking data that failed:', JSON.stringify(bookingData, null, 2))
+        console.error('Booking data that failed:', JSON.stringify(updatedBookingData, null, 2))
 
         // Provide specific error messages for common RLS issues
         if (error.message.includes('row-level security policy')) {
@@ -486,18 +460,18 @@ Error details: ${error.message}`)
           const constraintName = constraintMatch ? constraintMatch[1] : 'unknown constraint';
 
           if (constraintName.includes('fk_technician') || constraintName.includes('technician')) {
-            throw new Error(`Database Error: Invalid technician ID '${bookingData.technician_id}'. This technician does not exist in the technician_details table. Please use a valid technician_details.id (like 660e8400-e29b-41d4-a716-446655440002).`)
+            throw new Error(`Database Error: Invalid technician ID '${updatedBookingData.technician_id}'. This technician does not exist in the technician_details table. Please use a valid technician_details.id (like 660e8400-e29b-41d4-a716-446655440002).`)
           }
 
           if (constraintName.includes('customer')) {
-            throw new Error(`Database Error: Invalid customer ID '${bookingData.customer_id}'. The customer may not exist in the users table.`)
+            throw new Error(`Database Error: Invalid customer ID '${updatedBookingData.customer_id}'. The customer may not exist in the users table.`)
           }
 
           if (constraintName.includes('service')) {
-            throw new Error(`Database Error: Invalid service ID '${bookingData.service_id}'. The service may not exist in the services table.`)
+            throw new Error(`Database Error: Invalid service ID '${updatedBookingData.service_id}'. The service may not exist in the services table.`)
           }
 
-          throw new Error(`Database Error: Foreign key constraint violation '${constraintName}'. Referenced record may not exist. Data: ${JSON.stringify(bookingData, null, 2)}`)
+          throw new Error(`Database Error: Foreign key constraint violation '${constraintName}'. Referenced record may not exist. Data: ${JSON.stringify(updatedBookingData, null, 2)}`)
         }
 
         throw new Error(`Failed to create booking: ${error.message}`)

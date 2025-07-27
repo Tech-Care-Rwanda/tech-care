@@ -39,9 +39,8 @@ const navigationMenus = {
     { icon: User, label: "Profile", href: "/dashboard/profile" },
   ],
   technician: [
-    { icon: Wrench, label: "Dashboard", href: "/technician/dashboard" },
-    { icon: Search, label: "Find Clients", href: "/" },
-    { icon: Calendar, label: "My Jobs", href: "/technician/dashboard" },
+    { icon: Calendar, label: "Dashboard", href: "/technician/dashboard" },
+    { icon: Wrench, label: "My Jobs", href: "/technician/dashboard" },
     { icon: User, label: "Profile", href: "/technician/profile" },
   ],
   admin: [
@@ -60,12 +59,12 @@ export function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const pathname = usePathname()
 
-  // Use auth context user role, fallback to prop
-  const effectiveUserType = user?.role || userType
-  const effectiveUserInfo = userInfo || {
-    full_name: user?.full_name,
+  // Use auth context user role
+  const effectiveUserType = user?.role
+  const effectiveUserInfo = {
+    full_name: user?.full_name || "User",
     email: user?.email || "",
-    avatar: user?.avatar,
+    avatar: user?.avatar_url,
     status: user?.is_active ? "Active" : "Inactive"
   }
 
@@ -93,7 +92,7 @@ export function DashboardLayout({
         <Avatar>
           <AvatarImage src={effectiveUserInfo.avatar} />
           <AvatarFallback>
-            {effectiveUserInfo.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            {(effectiveUserInfo.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
@@ -136,12 +135,12 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <Header />
+      {/* Conditionally render Header */}
+      {effectiveUserType !== 'TECHNICIAN' && <Header />}
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className={`flex ${effectiveUserType === 'TECHNICIAN' ? 'h-screen' : 'h-[calc(100vh-4rem)]'}`}>
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-16 md:left-0 border-r bg-card">
+        <aside className={`hidden md:flex md:w-64 md:flex-col md:fixed md:left-0 border-r bg-card ${effectiveUserType === 'TECHNICIAN' ? 'md:inset-y-0' : 'md:inset-y-16'}`}>
           <SidebarContent />
         </aside>
 
@@ -152,7 +151,7 @@ export function DashboardLayout({
               className="fixed inset-0 bg-black/20"
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="fixed left-0 top-16 bottom-0 w-64 bg-card border-r">
+            <div className={`fixed left-0 top-0 bottom-0 w-64 bg-card border-r`}>
               <SidebarContent />
             </div>
           </div>

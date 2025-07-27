@@ -3,9 +3,10 @@
  * Provides hooks for technician-specific data and operations
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { API_ENDPOINTS } from '@/lib/config/api'
 import { BackendBooking, BookingCategory, BookingStatus } from '@/lib/services/bookingService'
+import { supabase } from '@/lib/supabase'
 
 // Simple API response interface
 interface ApiResponse<T> {
@@ -74,98 +75,73 @@ export interface TechnicianProfile {
 }
 
 // Hook for technician dashboard stats
-export function useTechnicianStats() {
+export function useTechnicianStats(technicianId: string | null | undefined) {
     const [stats, setStats] = useState<TechnicianStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
+        if (!technicianId) {
+            setLoading(false)
+            return
+        }
+
         try {
             setLoading(true)
             setError(null)
 
-            // Fetch bookings to calculate stats
-            const response = await apiService.get<BackendBooking[]>(API_ENDPOINTS.BOOKING.GET_ALL)
+            // Fetch completed bookings and reviews in parallel
+            const [bookingsResponse, reviewsResponse] = await Promise.all([
+                supabase
+                    .from('bookings')
+                    .select('id, price_rwf, created_at')
+                    .eq('technician_id', technicianId)
+                    .eq('status', 'completed'),
+                supabase
+                    .from('reviews')
+                    .select('rating')
+                    .eq('technician_id', technicianId)
+            ])
 
-            if (response.success && response.data) {
-                const bookings = response.data
+            if (bookingsResponse.error) throw bookingsResponse.error
+            if (reviewsResponse.error) throw reviewsResponse.error
 
-                // Calculate stats from real bookings
-                const currentMonth = new Date().getMonth()
-                const currentYear = new Date().getFullYear()
+            const completedBookings = bookingsResponse.data || []
+            const reviews = reviewsResponse.data || []
 
-                const completedBookings = bookings.filter(b => b.status === 'COMPLETED')
-                const monthlyBookings = bookings.filter(b => {
-                    const bookingDate = new Date(b.createdAt)
-                    return bookingDate.getMonth() === currentMonth &&
-                        bookingDate.getFullYear() === currentYear
-                })
+            // Calculate stats
+            const totalEarnings = completedBookings.reduce((sum, b) => sum + Number(b.price_rwf || 0), 0)
+            const rating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0
 
-                const monthlyCompleted = monthlyBookings.filter(b => b.status === 'COMPLETED')
+            const currentMonth = new Date().getMonth()
+            const monthlyBookings = completedBookings.filter(b => new Date(b.created_at).getMonth() === currentMonth)
+            const monthlyEarnings = monthlyBookings.reduce((sum, b) => sum + Number(b.price_rwf || 0), 0)
 
-                // Calculate earnings (5000 RWF per hour as base rate)
-                const calculateEarnings = (bookingList: BackendBooking[]) => {
-                    return bookingList.reduce((total, booking) => {
-                        const hours = booking.estimatedHours || 2
-                        return total + (hours * 5000)
-                    }, 0)
-                }
-
-                const stats: TechnicianStats = {
-                    totalEarnings: calculateEarnings(completedBookings),
-                    monthlyEarnings: calculateEarnings(monthlyCompleted),
-                    completedJobs: completedBookings.length,
-                    monthlyJobs: monthlyBookings.length,
-                    rating: 4.8, // TODO: Calculate from reviews when implemented
-                    totalReviews: 89, // TODO: Get from reviews
-                    responseTime: "< 2 hours", // TODO: Calculate from response times
-                    acceptanceRate: 94, // TODO: Calculate from accepted/rejected bookings
-                    availabilityStatus: true // TODO: Get from technician profile
-                }
-
-                setStats(stats)
-            } else {
-                // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
-                // const mockStats: TechnicianStats = {
-                //     totalEarnings: 485000,
-                //     monthlyEarnings: 125000,
-                //     completedJobs: 127,
-                //     monthlyJobs: 18,
-                //     rating: 4.8,
-                //     totalReviews: 89,
-                //     responseTime: "< 2 hours",
-                //     acceptanceRate: 94,
-                //     availabilityStatus: true
-                // }
-                // setStats(mockStats)
-
-                setError('No booking data available')
+            const statsData: TechnicianStats = {
+                totalEarnings,
+                monthlyEarnings,
+                completedJobs: completedBookings.length,
+                monthlyJobs: monthlyBookings.length,
+                rating,
+                totalReviews: reviews.length,
+                responseTime: "< 2 hours", // Placeholder
+                acceptanceRate: 94, // Placeholder
+                availabilityStatus: true // Placeholder
             }
+
+            setStats(statsData)
+
         } catch (err) {
             console.error('Error fetching technician stats:', err)
             setError(err instanceof Error ? err.message : 'Failed to fetch stats')
-
-            // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
-            // const mockStats: TechnicianStats = {
-            //     totalEarnings: 485000,
-            //     monthlyEarnings: 125000,
-            //     completedJobs: 127,
-            //     monthlyJobs: 18,
-            //     rating: 4.8,
-            //     totalReviews: 89,
-            //     responseTime: "< 2 hours",
-            //     acceptanceRate: 94,
-            //     availabilityStatus: true
-            // }
-            // setStats(mockStats)
         } finally {
             setLoading(false)
         }
-    }
+    }, [technicianId])
 
     useEffect(() => {
         fetchStats()
-    }, [])
+    }, [fetchStats])
 
     return {
         stats,
@@ -176,7 +152,7 @@ export function useTechnicianStats() {
 }
 
 // Hook for technician bookings
-export function useTechnicianBookings() {
+export function useTechnicianBookings(userId: string | null | undefined) {
     const [bookings, setBookings] = useState<TechnicianBooking[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -244,60 +220,66 @@ export function useTechnicianBookings() {
         ).join(' ')
     }
 
-    const fetchBookings = async (technicianId: string) => {
+    const fetchBookings = useCallback(async () => {
+        // For testing purposes, fetch ALL bookings regardless of technician
+        // Later this can be changed back to filter by technician ID
         try {
             setLoading(true)
             setError(null)
 
-            console.log('🔍 Fetching bookings for technician:', technicianId)
+            console.log('🔍 Fetching ALL bookings from Supabase for testing...')
 
-            // Fetch real bookings from our new API endpoint
-            const response = await fetch(`/api/bookings/technician/${technicianId}`)
-            const result = await response.json()
+            // Fetch ALL bookings with customer information
+            const { data: bookingsData, error: bookingsError } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    customer:users!bookings_customer_id_fkey (
+                        id,
+                        full_name,
+                        phone_number,
+                        email
+                    )
+                `)
+                .order('created_at', { ascending: false });
 
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Failed to fetch bookings')
-            }
+            if (bookingsError) throw bookingsError
 
-            console.log('✅ Received technician bookings:', result.bookings)
+            console.log('✅ Received ALL bookings:', bookingsData)
 
-            if (result.bookings && result.bookings.length > 0) {
-                const transformedBookings = result.bookings.map((booking: any) =>
+            if (bookingsData && bookingsData.length > 0) {
+                const transformedBookings = bookingsData.map((booking: any) =>
                     transformDatabaseBooking(booking)
                 )
                 setBookings(transformedBookings)
                 console.log('📝 Transformed bookings:', transformedBookings)
             } else {
                 setBookings([])
-                console.log('📋 No bookings found for technician')
+                console.log('📋 No bookings found in database')
             }
         } catch (err) {
-            console.error('Error fetching technician bookings:', err)
+            console.error('Error fetching bookings:', err)
             setError(err instanceof Error ? err.message : 'Failed to fetch bookings')
             setBookings([])
         } finally {
             setLoading(false)
         }
-    }
+    }, []) // Removed userId dependency since we're fetching all bookings
 
     const updateBookingStatus = async (bookingId: string, status: TechnicianBooking['status'], notes?: string) => {
         try {
             console.log('🔄 Updating booking status:', { bookingId, status, notes })
 
             // Call our new status update API
-            const response = await fetch(`/api/bookings/${bookingId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status, notes })
-            })
+            const response = await supabase
+                .from('bookings')
+                .update({ status, notes })
+                .eq('id', bookingId)
+                .select()
+                .single();
 
-            const result = await response.json()
-
-            if (!response.ok || !result.success) {
-                // If API update fails due to RLS, update local state optimistically
-                console.warn('⚠️ API update failed, updating local state only:', result.error)
+            if (response.error) {
+                console.warn('⚠️ Supabase update failed, updating local state only:', response.error.message)
 
                 setBookings(prev =>
                     prev.map(booking =>
@@ -345,14 +327,14 @@ export function useTechnicianBookings() {
     }
 
     useEffect(() => {
-        // Don't auto-fetch on mount, wait for technician ID
-    }, [])
+        fetchBookings()
+    }, [fetchBookings])
 
     return {
         bookings,
         loading,
         error,
-        fetchBookings, // Now requires technicianId parameter
+        fetchBookings,
         updateBookingStatus
     }
 }
@@ -369,10 +351,14 @@ export function useTechnicianProfile() {
             setError(null)
 
             // TODO: Replace with real API call when backend endpoint is ready
-            const response = await apiService.get('/technician/profile')
+            const response = await supabase
+                .from('technicians')
+                .select('*')
+                .eq('id', 't1') // Mock ID for now
+                .single();
 
-            if (response.success && response.data) {
-                setProfile(response.data)
+            if (response.data) {
+                setProfile(response.data as TechnicianProfile);
             } else {
                 // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
                 // const mockProfile: TechnicianProfile = {
@@ -428,18 +414,15 @@ export function useTechnicianProfile() {
             console.log('🔄 Updating technician availability:', { technicianId, isAvailable })
 
             // Call our availability update API
-            const response = await fetch(`/api/technicians/${technicianId}/availability`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ is_available: isAvailable })
-            })
+            const response = await supabase
+                .from('technicians')
+                .update({ is_available: isAvailable })
+                .eq('id', technicianId)
+                .select()
+                .single();
 
-            const result = await response.json()
-
-            if (!response.ok || !result.success) {
-                console.warn('⚠️ API availability update failed, updating local state only:', result.error)
+            if (response.error) {
+                console.warn('⚠️ Supabase availability update failed, updating local state only:', response.error.message)
 
                 // Update local state optimistically
                 setProfile(prev => prev ? { ...prev, isAvailable } : null)

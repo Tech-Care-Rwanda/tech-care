@@ -6,7 +6,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/contexts/AuthContext'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,9 +61,9 @@ interface ProfileFormData {
 }
 
 export function ProfileManagement() {
-    const { user, isCustomer, isTechnician, isAdmin } = useAuth()
+    const { profile, isCustomer, isTechnician, isAdmin } = useSupabaseAuth()
 
-    if (!user) {
+    if (!profile) {
         return (
             <div className="flex items-center justify-center min-h-[200px]">
                 <p className="text-gray-500">Please log in to view your profile</p>
@@ -79,8 +78,8 @@ export function ProfileManagement() {
                     <h1 className="text-3xl font-bold text-gray-900">Profile Management</h1>
                     <p className="text-gray-600 mt-1">Manage your account information and preferences</p>
                 </div>
-                <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? 'Active' : 'Inactive'}
+                <Badge variant={profile.is_active ? "default" : "secondary"}>
+                    {profile.is_active ? 'Active' : 'Inactive'}
                 </Badge>
             </div>
 
@@ -99,11 +98,11 @@ export function ProfileManagement() {
 }
 
 function BasicProfileCard() {
-    const { user, updateUser } = useAuth()
+    const { profile, updateUser } = useSupabaseAuth()
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState<ProfileFormData>({
-        full_name: user?.full_name || '',
-        phone_number: user?.phone_number || '',
+        full_name: profile?.full_name || '',
+        phone_number: profile?.phone_number || '',
     })
     const [loading, setLoading] = useState(false)
 
@@ -123,8 +122,8 @@ function BasicProfileCard() {
 
     const handleCancel = () => {
         setFormData({
-            full_name: user?.full_name || '',
-            phone_number: user?.phone_number || '',
+            full_name: profile?.full_name || '',
+            phone_number: profile?.phone_number || '',
         })
         setIsEditing(false)
     }
@@ -169,7 +168,7 @@ function BasicProfileCard() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF385C]"
                             />
                         ) : (
-                            <p className="text-gray-900">{user?.full_name}</p>
+                            <p className="text-gray-900">{profile?.full_name}</p>
                         )}
                     </div>
 
@@ -177,7 +176,7 @@ function BasicProfileCard() {
                         <label className="text-sm font-medium text-gray-700">Email</label>
                         <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-gray-400" />
-                            <p className="text-gray-900">{user?.email}</p>
+                            <p className="text-gray-900">{profile?.email}</p>
                         </div>
                     </div>
 
@@ -193,7 +192,7 @@ function BasicProfileCard() {
                         ) : (
                             <div className="flex items-center gap-2">
                                 <Phone className="h-4 w-4 text-gray-400" />
-                                <p className="text-gray-900">{user?.phone_number || 'Not provided'}</p>
+                                <p className="text-gray-900">{profile?.phone_number || 'Not provided'}</p>
                             </div>
                         )}
                     </div>
@@ -203,7 +202,7 @@ function BasicProfileCard() {
                         <div className="flex items-center gap-2">
                             <Shield className="h-4 w-4 text-gray-400" />
                             <Badge variant="outline">
-                                {user?.role?.toLowerCase()}
+                                {profile?.role?.toLowerCase()}
                             </Badge>
                         </div>
                     </div>
@@ -214,11 +213,11 @@ function BasicProfileCard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Joined {new Date(user?.created_at || '').toLocaleDateString()}</span>
+                        <span>Joined {new Date(profile?.created_at || '').toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>Last updated {new Date(user?.updated_at || '').toLocaleDateString()}</span>
+                        <span>Last updated {new Date(profile?.updated_at || '').toLocaleDateString()}</span>
                     </div>
                 </div>
             </CardContent>
@@ -227,7 +226,7 @@ function BasicProfileCard() {
 }
 
 function TechnicianProfileCard() {
-    const { user } = useAuth()
+    const { profile: user } = useSupabaseAuth()
     const [technicianDetails, setTechnicianDetails] = useState<TechnicianDetails | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -351,7 +350,7 @@ function TechnicianProfileCard() {
 }
 
 function CustomerProfileCard() {
-    const { user } = useAuth()
+    const { profile } = useSupabaseAuth()
 
     return (
         <Card>

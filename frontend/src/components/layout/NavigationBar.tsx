@@ -3,22 +3,13 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Home, Calendar, Users, Settings, LogOut, User, ChevronDown, Bell, Search, Menu, X, Phone, HelpCircle } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { SafeAvatar } from '@/components/ui/safe-avatar'
-import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
-import {
-  Menu,
-  X,
-  Home,
-  Calendar,
-  User,
-  HelpCircle,
-  LogOut,
-  Search,
-  Settings,
-  ChevronDown
-} from 'lucide-react'
 
 
 interface NavigationBarProps {
@@ -30,9 +21,36 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const pathname = usePathname()
   const profileDropdownRef = useRef<HTMLDivElement>(null)
-  
+
   // Get authentication state
   const { profile, signOut, loading } = useSupabaseAuth()
+
+  // Get real booking count from database
+  const [bookingCount, setBookingCount] = useState(0)
+
+  // Fetch real booking count
+  useEffect(() => {
+    const fetchBookingCount = async () => {
+      if (!profile?.id) return
+
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('id', { count: 'exact' })
+          .eq('customer_id', profile.id)
+          .in('status', ['pending', 'confirmed', 'scheduled', 'in_progress'])
+
+        if (!error && data) {
+          setBookingCount(data.length)
+        }
+      } catch (err) {
+        console.error('Error fetching booking count:', err)
+        setBookingCount(0)
+      }
+    }
+
+    fetchBookingCount()
+  }, [profile?.id])
 
   // Use actual user data from authentication context
   const user = profile ? {
@@ -41,9 +59,6 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
     initials: profile.full_name?.split(' ').map(n => n[0]).join('') || 'U',
     email: profile.email
   } : null
-
-  // Mock pending bookings count - in real app, get from API
-  const pendingBookingsCount = 2
 
   const handleMobileMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -84,33 +99,35 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
   // Role-based navigation items
   const getNavigationItems = () => {
     const baseItems = [
-      { href: '/', label: 'Find Technicians', icon: Home, badge: 1 }
+      { href: '/', label: 'Find Technicians', icon: Home }
     ]
 
     if (!profile) return baseItems
 
     // Add role-specific items
-    switch (profile.role) {
-      case 'CUSTOMER':
-        return [
-          ...baseItems,
-          { href: '/dashboard', label: 'My Bookings', icon: Calendar, badge: pendingBookingsCount }
-        ]
-      case 'TECHNICIAN':
-        return [
-          ...baseItems,
-          { href: '/technician/dashboard', label: 'My Jobs', icon: Calendar, badge: pendingBookingsCount },
-          { href: '/dashboard', label: 'Find Jobs', icon: Search, badge: 1 }
-        ]
-      case 'ADMIN':
-        return [
-          ...baseItems,
-          { href: '/admin/dashboard', label: 'Admin Panel', icon: Settings, badge: pendingBookingsCount },
-          { href: '/dashboard', label: 'Overview', icon: Calendar, badge: 1 }
-        ]
-      default:
-        return baseItems
+    if (profile.role === 'CUSTOMER') {
+      return [
+        ...baseItems,
+        { href: '/dashboard', label: 'My Bookings', icon: Calendar, badge: bookingCount > 0 ? bookingCount : undefined }
+      ]
     }
+
+    if (profile.role === 'TECHNICIAN') {
+      return [
+        { href: '/technician/dashboard', label: 'My Jobs', icon: Calendar },
+        { href: '/', label: 'Find Customers', icon: Users }
+      ]
+    }
+
+    if (profile.role === 'ADMIN') {
+      return [
+        ...baseItems,
+        { href: '/admin/dashboard', label: 'Admin Panel', icon: Settings },
+        { href: '/admin/technicians', label: 'Manage Technicians', icon: Users }
+      ]
+    }
+
+    return baseItems
   }
 
   const navigationItems = getNavigationItems()
@@ -184,80 +201,79 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
               {!loading && user && (
                 /* Profile Dropdown (Desktop) */
                 <div className="hidden md:flex items-center relative" ref={profileDropdownRef}>
-                <button
-                  onClick={toggleProfileDropdown}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
-                >
-                  <SafeAvatar 
-                    src={user.avatar} 
-                    alt={user.full_name}
-                    fallback={user.initials}
-                    size="sm"
-                  />
-                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isProfileDropdownOpen ? 'transform rotate-180' : ''}`} />
-                </button>
+                  <button
+                    onClick={toggleProfileDropdown}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    <SafeAvatar
+                      src={user.avatar}
+                      alt={user.full_name}
+                      fallback={user.initials}
+                      size="sm"
+                    />
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isProfileDropdownOpen ? 'transform rotate-180' : ''}`} />
+                  </button>
 
-                {/* Profile Dropdown Menu */}
-                {isProfileDropdownOpen && user && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
-                      {profile && (
-                        <div className="mt-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            profile.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
-                            profile.role === 'TECHNICIAN' ? 'bg-green-100 text-green-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
-                            {
-                              profile.role === 'ADMIN' ?
-                                '👑 Admin' : profile.role === 'TECHNICIAN' ?
-                                '🔧 Technician' : '👤 Customer'
-                            }
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  {/* Profile Dropdown Menu */}
+                  {isProfileDropdownOpen && user && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                        {profile && (
+                          <div className="mt-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${profile.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                              profile.role === 'TECHNICIAN' ? 'bg-green-100 text-green-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                              {
+                                profile.role === 'ADMIN' ?
+                                  '👑 Admin' : profile.role === 'TECHNICIAN' ?
+                                    '🔧 Technician' : '👤 Customer'
+                              }
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <User className="w-4 h-4 mr-3" />
-                      My Profile
-                    </Link>
-
-                    <Link
-                      href="/settings"
-                      onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Settings className="w-4 h-4 mr-3" />
-                      Settings
-                    </Link>
-
-                    <Link
-                      href="/help"
-                      onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <HelpCircle className="w-4 h-4 mr-3" />
-                      Help
-                    </Link>
-
-                    <div className="border-t border-gray-100 mt-1">
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        <LogOut className="w-4 h-4 mr-3" />
-                        Sign Out
-                      </button>
+                        <User className="w-4 h-4 mr-3" />
+                        My Profile
+                      </Link>
+
+                      <Link
+                        href="/settings"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Settings className="w-4 h-4 mr-3" />
+                        Settings
+                      </Link>
+
+                      <Link
+                        href="/help"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <HelpCircle className="w-4 h-4 mr-3" />
+                        Help
+                      </Link>
+
+                      <div className="border-t border-gray-100 mt-1">
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Sign Out
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </div>
               )}
 
