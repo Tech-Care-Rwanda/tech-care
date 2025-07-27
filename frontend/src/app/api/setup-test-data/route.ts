@@ -3,139 +3,189 @@
  * Creates the missing users that technicians reference
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    console.log('🔧 Setting up test data...')
+    console.log('🚀 Setting up test data...')
 
-    // Create users that match the technician user_ids
-    const testUsers = [
+    // Test technician data to populate the database
+    const testTechnicians = [
       {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        full_name: 'John Uwimana',
-        phone_number: '+250 788 123 456',
-        email: 'john.uwimana@techcare.rw',
-        role: 'TECHNICIAN',
-        is_active: true
+        user: {
+          full_name: 'John Mugisha',
+          email: 'john.mugisha@techcare.rw',
+          phone_number: '+250788123456',
+          role: 'TECHNICIAN',
+          is_active: true
+        },
+        details: {
+          specialization: 'Computer Repair',
+          experience: '5+ years',
+          is_available: true
+        }
       },
       {
-        id: '550e8400-e29b-41d4-a716-446655440002', 
-        full_name: 'Marie Mukamana',
-        phone_number: '+250 788 234 567',
-        email: 'marie.mukamana@techcare.rw',
-        role: 'TECHNICIAN',
-        is_active: true
+        user: {
+          full_name: 'Sarah Uwimana',
+          email: 'sarah.uwimana@techcare.rw',
+          phone_number: '+250788123457',
+          role: 'TECHNICIAN',
+          is_active: true
+        },
+        details: {
+          specialization: 'Phone Repair',
+          experience: '3+ years',
+          is_available: true
+        }
       },
       {
-        id: '550e8400-e29b-41d4-a716-446655440003',
-        full_name: 'Paul Nzeyimana', 
-        phone_number: '+250 788 345 678',
-        email: 'paul.nzeyimana@techcare.rw',
-        role: 'TECHNICIAN',
-        is_active: true
+        user: {
+          full_name: 'David Nkurunziza',
+          email: 'david.nkurunziza@techcare.rw',
+          phone_number: '+250788123458',
+          role: 'TECHNICIAN',
+          is_active: true
+        },
+        details: {
+          specialization: 'Network Setup',
+          experience: '6+ years',
+          is_available: true
+        }
       },
       {
-        id: '550e8400-e29b-41d4-a716-446655440001', // Test customer ID used in booking
-        full_name: 'Test Customer',
-        phone_number: '+250 788 999 999',
-        email: 'customer@techcare.rw',
-        role: 'CUSTOMER',
-        is_active: true
+        user: {
+          full_name: 'Alice Mukamana',
+          email: 'alice.mukamana@techcare.rw',
+          phone_number: '+250788123459',
+          role: 'TECHNICIAN',
+          is_active: true
+        },
+        details: {
+          specialization: 'Laptop Repair',
+          experience: '4+ years',
+          is_available: true
+        }
+      },
+      {
+        user: {
+          full_name: 'Eric Habimana',
+          email: 'eric.habimana@techcare.rw',
+          phone_number: '+250788123460',
+          role: 'TECHNICIAN',
+          is_active: true
+        },
+        details: {
+          specialization: 'iPhone Repair',
+          experience: '2+ years',
+          is_available: true
+        }
       }
     ]
 
-    console.log('Creating users:', testUsers.map(u => `${u.full_name} (${u.role})`))
+    const results = []
 
-    // Insert users (ignore conflicts if they already exist)
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .upsert(testUsers, { onConflict: 'id' })
-      .select()
+    for (const techData of testTechnicians) {
+      try {
+        // Check if user already exists
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', techData.user.email)
+          .single()
 
-    if (usersError) {
-      console.error('Error creating users:', usersError)
-      return NextResponse.json({
-        success: false,
-        error: `Failed to create users: ${usersError.message}`
-      }, { status: 500 })
-    }
+        let userId: string
 
-    console.log(`✅ Created ${users?.length || 0} users`)
+        if (existingUser) {
+          console.log(`✅ User already exists: ${techData.user.email}`)
+          userId = existingUser.id
+        } else {
+          // Create user
+          const { data: newUser, error: userError } = await supabase
+            .from('users')
+            .insert(techData.user)
+            .select('id')
+            .single()
 
-    // Create technician_details for the technician users
-    const technicianDetails = [
-      {
-        id: '660e8400-e29b-41d4-a716-446655440002',
-        user_id: '550e8400-e29b-41d4-a716-446655440000',
-        specialization: 'Computer Repair',
-        experience: 'Over 5 years experience in computer hardware and software repair',
-        gender: 'Male',
-        age: 32,
-        date_of_birth: '1992-03-15',
-        rate: 15000,
-        is_available: true,
-        approval_status: 'APPROVED'
-      },
-      {
-        id: '660e8400-e29b-41d4-a716-446655440003',
-        user_id: '550e8400-e29b-41d4-a716-446655440002',
-        specialization: 'Network Setup',
-        experience: 'Expert in network configuration and wireless setup. 4+ years experience',
-        gender: 'Female',
-        age: 28,
-        date_of_birth: '1996-07-22',
-        rate: 18000,
-        is_available: true,
-        approval_status: 'APPROVED'
-      },
-      {
-        id: '660e8400-e29b-41d4-a716-446655440004',
-        user_id: '550e8400-e29b-41d4-a716-446655440003',
-        specialization: 'Phone Repair',
-        experience: 'Specialized in mobile device repair and troubleshooting. 3+ years experience',
-        gender: 'Male',
-        age: 30,
-        date_of_birth: '1994-11-08',
-        rate: 12000,
-        is_available: true,
-        approval_status: 'APPROVED'
+          if (userError) {
+            console.error(`❌ Error creating user ${techData.user.email}:`, userError)
+            results.push({ email: techData.user.email, status: 'user_error', error: userError.message })
+            continue
+          }
+
+          userId = newUser.id
+          console.log(`✅ Created user: ${techData.user.email} with ID: ${userId}`)
+        }
+
+        // Check if technician details already exist
+        const { data: existingDetails } = await supabase
+          .from('technician_details')
+          .select('id')
+          .eq('user_id', userId)
+          .single()
+
+        if (existingDetails) {
+          console.log(`✅ Technician details already exist for user: ${techData.user.email}`)
+          results.push({ email: techData.user.email, status: 'already_exists', userId })
+        } else {
+          // Create technician details
+          const { data: newDetails, error: detailsError } = await supabase
+            .from('technician_details')
+            .insert({
+              user_id: userId,
+              ...techData.details
+            })
+            .select('id')
+            .single()
+
+          if (detailsError) {
+            console.error(`❌ Error creating technician details for ${techData.user.email}:`, detailsError)
+            results.push({ email: techData.user.email, status: 'details_error', error: detailsError.message })
+            continue
+          }
+
+          console.log(`✅ Created technician details for: ${techData.user.email}`)
+          results.push({ email: techData.user.email, status: 'created', userId, detailsId: newDetails.id })
+        }
+
+      } catch (err) {
+        console.error(`💥 Critical error processing ${techData.user.email}:`, err)
+        results.push({
+          email: techData.user.email,
+          status: 'critical_error',
+          error: err instanceof Error ? err.message : 'Unknown error'
+        })
       }
-    ]
-
-    console.log('Creating technician details:', technicianDetails.map(t => `${t.specialization} (user_id: ${t.user_id})`))
-
-    // Insert technician details (ignore conflicts if they already exist)
-    const { data: techDetails, error: techDetailsError } = await supabase
-      .from('technician_details')
-      .upsert(technicianDetails, { onConflict: 'id' })
-      .select()
-
-    if (techDetailsError) {
-      console.warn('Warning creating technician details:', techDetailsError)
-      // Don't fail the whole operation if technician details fail
     }
 
-    console.log(`✅ Created ${techDetails?.length || 0} technician detail records`)
+    // Summary
+    const created = results.filter(r => r.status === 'created').length
+    const existing = results.filter(r => r.status === 'already_exists').length
+    const errors = results.filter(r => r.status.includes('error')).length
+
+    console.log(`🎯 Test data setup complete: ${created} created, ${existing} already existed, ${errors} errors`)
 
     return NextResponse.json({
       success: true,
-      message: 'Test data setup completed',
-      data: {
-        users_created: users?.length || 0,
-        technician_details_created: techDetails?.length || 0,
-        users: users,
-        technician_details: techDetails
-      }
+      message: 'Test technician data setup completed',
+      summary: {
+        created,
+        existing,
+        errors
+      },
+      details: results
     })
 
   } catch (error) {
-    console.error('Setup test data error:', error)
-    
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    console.error('💥 Critical error in test data setup:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to setup test data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
   }
 }

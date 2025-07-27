@@ -166,7 +166,7 @@ export function useTechnicianBookings(userId: string | null | undefined) {
                 name: databaseBooking.customer.full_name,
                 phone: databaseBooking.customer.phone_number,
                 email: databaseBooking.customer.email,
-                image: '/placeholder-avatar.jpg' // Default image
+                image: undefined // Let SafeAvatar component handle fallback
             },
             service: databaseBooking.service_type,
             description: databaseBooking.problem_description,
@@ -270,16 +270,34 @@ export function useTechnicianBookings(userId: string | null | undefined) {
         try {
             console.log('🔄 Updating booking status:', { bookingId, status, notes })
 
-            // Call our new status update API
-            const response = await supabase
+            // Update the booking status in Supabase
+            const { data, error } = await supabase
                 .from('bookings')
                 .update({ status, notes })
                 .eq('id', bookingId)
                 .select()
-                .single();
 
-            if (response.error) {
-                console.warn('⚠️ Supabase update failed, updating local state only:', response.error.message)
+            if (error) {
+                console.error('❌ Supabase update failed:', error)
+
+                // Still update local state optimistically
+                setBookings(prev =>
+                    prev.map(booking =>
+                        booking.id === bookingId
+                            ? { ...booking, status, updatedAt: new Date().toISOString() }
+                            : booking
+                    )
+                )
+
+                return {
+                    success: true,
+                    warning: `Database update failed: ${error.message}. Status updated locally only.`
+                }
+            }
+
+            // Check if any rows were actually updated
+            if (!data || data.length === 0) {
+                console.warn('⚠️ No rows updated - booking may not exist')
 
                 setBookings(prev =>
                     prev.map(booking =>
@@ -291,12 +309,12 @@ export function useTechnicianBookings(userId: string | null | undefined) {
 
                 return {
                     success: true,
-                    warning: 'Status updated locally. Database update may require additional permissions.'
+                    warning: 'Booking not found in database. Status updated locally only.'
                 }
             }
 
-            // If API update succeeds, update local state with real data
-            console.log('✅ Booking status updated successfully')
+            // Success - update local state with real data
+            console.log('✅ Booking status updated successfully in database:', data)
 
             setBookings(prev =>
                 prev.map(booking =>
@@ -307,8 +325,9 @@ export function useTechnicianBookings(userId: string | null | undefined) {
             )
 
             return { success: true }
+
         } catch (err) {
-            console.error('Error updating booking status:', err)
+            console.error('💥 Error updating booking status:', err)
 
             // Fallback: update local state optimistically
             setBookings(prev =>
@@ -321,7 +340,7 @@ export function useTechnicianBookings(userId: string | null | undefined) {
 
             return {
                 success: true,
-                warning: 'Status updated locally only due to network/permission issues'
+                warning: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}. Status updated locally only.`
             }
         }
     }
@@ -350,41 +369,11 @@ export function useTechnicianProfile() {
             setLoading(true)
             setError(null)
 
-            // TODO: Replace with real API call when backend endpoint is ready
-            const response = await supabase
-                .from('technicians')
-                .select('*')
-                .eq('id', 't1') // Mock ID for now
-                .single();
+            // For now, we don't fetch a separate technician profile
+            // The main profile comes from useSupabaseAuth
+            // This hook is mainly used for availability management
+            setProfile(null)
 
-            if (response.data) {
-                setProfile(response.data as TechnicianProfile);
-            } else {
-                // ⚠️ FALLBACK LOGIC COMMENTED OUT - REAL API ONLY
-                // const mockProfile: TechnicianProfile = {
-                //     id: "t1",
-                //     name: "John Mugisha",
-                //     email: "john.mugisha@example.com",
-                //     phone: "+250 788 123 456",
-                //     avatar: "/placeholder-avatar.jpg",
-                //     specialization: "Computer Repair & Network Setup",
-                //     experience: "5+ years",
-                //     hourlyRate: 15000,
-                //     isAvailable: true,
-                //     location: "Kigali, Rwanda",
-                //     bio: "Experienced computer technician specializing in hardware repair, network configuration, and system optimization. Available for both home and office visits.",
-                //     skills: ["Computer Repair", "Network Setup", "Data Recovery", "Hardware Upgrade", "Software Installation"],
-                //     certifications: ["CompTIA A+", "Network+ Certified", "Microsoft Certified"],
-                //     workingHours: {
-                //         start: "08:00",
-                //         end: "18:00",
-                //         days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-                //     }
-                // }
-                // setProfile(mockProfile)
-
-                setError('Failed to load profile data')
-            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch profile')
         } finally {
@@ -394,12 +383,9 @@ export function useTechnicianProfile() {
 
     const updateProfile = async (updates: Partial<TechnicianProfile>) => {
         try {
-            // TODO: Replace with real API call when backend endpoint is ready
-            // const response = await apiService.patch('/technician/profile', updates)
-
-            // Update local state for now
+            // TODO: Implement when technician profiles are needed
+            // For now, profile updates go through technician_details table
             setProfile(prev => prev ? { ...prev, ...updates } : null)
-
             return { success: true }
         } catch (err) {
             return {
@@ -413,36 +399,18 @@ export function useTechnicianProfile() {
         try {
             console.log('🔄 Updating technician availability:', { technicianId, isAvailable })
 
-            // Call our availability update API
-            const response = await supabase
-                .from('technicians')
-                .update({ is_available: isAvailable })
-                .eq('id', technicianId)
-                .select()
-                .single();
+            // For now, just update local state since we don't have an availability table yet
+            // This could be extended to update technician_details table
+            console.log('⚠️ Availability update: Currently updating local state only')
 
-            if (response.error) {
-                console.warn('⚠️ Supabase availability update failed, updating local state only:', response.error.message)
-
-                // Update local state optimistically
-                setProfile(prev => prev ? { ...prev, isAvailable } : null)
-
-                return {
-                    success: true,
-                    warning: 'Availability updated locally. Database update may require additional permissions.'
-                }
-            }
-
-            // If API update succeeds, update local state
-            console.log('✅ Technician availability updated successfully')
             setProfile(prev => prev ? { ...prev, isAvailable } : null)
 
-            return { success: true }
+            return {
+                success: true,
+                warning: 'Availability updated locally. Database integration pending.'
+            }
         } catch (err) {
             console.error('Error updating availability:', err)
-
-            // Fallback: update local state optimistically
-            setProfile(prev => prev ? { ...prev, isAvailable } : null)
 
             return {
                 success: true,

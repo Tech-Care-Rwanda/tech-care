@@ -84,9 +84,11 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
     setError(null)
 
     try {
+      console.log('🔍 TechnicianMap: Fetching technicians from database...')
+
       // Test connection first
       const connectionTest = await testSupabaseConnection()
-      console.log('Map connection test:', connectionTest)
+      console.log('✅ TechnicianMap: Connection test result:', connectionTest.success)
 
       if (!connectionTest.success) {
         throw new Error(`Supabase connection failed: ${connectionTest.error}`)
@@ -94,19 +96,29 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
 
       const techniciansData = await supabaseService.getTechnicians(true) // Get available technicians
 
-      console.log('Raw technician data from Supabase:', techniciansData) // Debug log
+      console.log('✅ TechnicianMap: Raw technician data from Supabase:', techniciansData?.length || 0, 'technicians')
 
-      // Transform Supabase data to map format
+      if (!techniciansData || techniciansData.length === 0) {
+        console.log('⚠️ TechnicianMap: No technicians found in database')
+        setTechnicians([])
+        setError('No available technicians found. New technicians will appear here when they join.')
+        return
+      }
+
+      // Filter for available technicians
       let filteredData = techniciansData.filter(tech => tech.is_available)
+      console.log('✅ TechnicianMap: Available technicians:', filteredData.length)
 
       // Apply specialization filter if provided
       if (filterSpecialization && filterSpecialization.length > 0) {
+        const originalCount = filteredData.length
         filteredData = filteredData.filter(tech =>
           filterSpecialization.some(spec =>
             tech.specialization.toLowerCase().includes(spec.toLowerCase()) ||
             spec.toLowerCase().includes(tech.specialization.toLowerCase())
           )
         )
+        console.log(`🔍 TechnicianMap: Filtered from ${originalCount} to ${filteredData.length} technicians based on specialization`)
       }
 
       // Transform data for map markers - create proper location objects with consistent coordinates
@@ -132,39 +144,46 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
         // Calculate estimated arrival based on distance from center of Kigali
         const distance = Math.sqrt(Math.pow(lat - (-1.9441), 2) + Math.pow(lng - 30.0619, 2)) * 111; // Rough km conversion
 
-        // Debug the technician data
-        console.log('Technician:', tech.id, 'Name:', tech.full_name, 'Specialization:', tech.specialization)
+        // Debug the technician data transformation
+        console.log('🔄 TechnicianMap: Transforming technician:', {
+          id: tech.id,
+          name: tech.full_name,
+          specialization: tech.specialization,
+          originalLat: tech.latitude,
+          originalLng: tech.longitude,
+          generatedLat: lat,
+          generatedLng: lng
+        })
 
         return {
-          id: tech.id, // Keep as UUID string, don't convert to string
+          id: tech.id, // Keep as UUID string
           name: tech.full_name || tech.specialization || 'Technician',
           avatar: tech.image_url,
-          rating: tech.rate / 10, // Convert rate to 5-star scale
+          rating: Math.min(5, Math.max(1, (tech.rate || 15000) / 3000)), // Convert rate to 1-5 star scale
           specialization: tech.specialization,
           location: { lat, lng },
           distance: Math.round(distance * 10) / 10,
-          estimatedArrival: `${Math.ceil(distance / 0.5)} min`,
+          estimatedArrival: `${Math.ceil(distance / 0.5) || 15} min`,
           isAvailable: tech.is_available,
           phoneNumber: tech.phone_number,
           rate: tech.rate
         }
       })
 
-      console.log('Transformed technicians:', transformedTechnicians) // Debug log
+      console.log('✅ TechnicianMap: Successfully transformed', transformedTechnicians.length, 'technicians for map display')
       setTechnicians(transformedTechnicians)
 
-      // If no technicians found, show message
-      if (transformedTechnicians.length === 0) {
-        setError('No available technicians found in your area.')
-      }
+      // Clear any previous errors
+      setError(null)
+
     } catch (err) {
-      console.error('Error fetching technicians from Supabase:', err)
-      setError('Failed to load technicians from database.')
+      console.error('❌ TechnicianMap: Error fetching technicians:', err)
+      setError('Failed to load technician data. Please try refreshing the page.')
       setTechnicians([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filterSpecialization])
 
   // Fetch technicians when user location is available
   useEffect(() => {
@@ -318,6 +337,15 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
 
                 <div className="flex space-x-2">
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/technician/${selectedTechnician.id}`)}
+                    className="flex-1"
+                  >
+                    View Profile
+                  </Button>
+
+                  <Button
                     size="sm"
                     onClick={() => router.push(`/book/${selectedTechnician.id}`)}
                     className="flex-1 text-white hover:opacity-90"
@@ -329,7 +357,7 @@ export const TechnicianMap: React.FC<TechnicianMapProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`tel:+250791995143`)}
+                    onClick={() => selectedTechnician.phoneNumber && window.open(`tel:${selectedTechnician.phoneNumber}`)}
                     title="Call technician"
                     className="border-gray-300 hover:bg-gray-50"
                   >

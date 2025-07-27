@@ -25,7 +25,7 @@ const SERVICE_CATEGORIES = [
     ]
   },
   {
-    id: 'mobile-devices', 
+    id: 'mobile-devices',
     name: '📱 Mobile & Devices',
     description: 'Phone & tablet repairs',
     specializations: [
@@ -35,7 +35,7 @@ const SERVICE_CATEGORIES = [
   },
   {
     id: 'network-setup',
-    name: '🌐 Network Setup', 
+    name: '🌐 Network Setup',
     description: 'WiFi & connectivity',
     specializations: [
       'Network Setup', 'Network', 'WiFi Setup', 'Internet Setup', 'Router Setup',
@@ -49,7 +49,7 @@ export default function Home() {
   const [technicians, setTechnicians] = useState<TechnicianDetails[]>([])
   const [filteredTechnicians, setFilteredTechnicians] = useState<TechnicianDetails[]>([])
   const [loading, setLoading] = useState(true)
-  
+
   // Get authentication state
   const { profile, loading: authLoading } = useSupabaseAuth()
 
@@ -62,160 +62,29 @@ export default function Home() {
     const fetchTechnicians = async () => {
       try {
         setLoading(true)
+        console.log('🔍 Homepage: Fetching technicians from database...')
+
         const data = await supabaseService.getTechnicians(true) // Only approved technicians
-        console.log('Fetched technicians from database:', data) // Debug log
-        console.log('Technician specializations found:', data?.map(t => t.specialization) || []) // Debug specializations
-        
-        // If no real data, use temporary mock data for testing filtering
-        if (!data || data.length === 0) {
-          console.log('⚠️ No real data found, using comprehensive mock data for testing filters')
-          const mockTechnicians: TechnicianDetails[] = [
-            // Computer Repair Technicians
-            {
-              id: '1',
-              user_id: '1',
-              specialization: 'Computer Repair',
-              experience: '5 years',
-              rate: 15000,
-              is_available: true,
-              latitude: -1.9441,
-              longitude: 30.0619,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '1',
-                full_name: 'John Computer',
-                phone_number: '+250788123456',
-                email: 'john@computer.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            },
-            {
-              id: '2',
-              user_id: '2',
-              specialization: 'Laptop Repair',
-              experience: '4 years',
-              rate: 14000,
-              is_available: true,
-              latitude: -1.9380,
-              longitude: 30.0650,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '2',
-                full_name: 'Alice Laptop',
-                phone_number: '+250788123457',
-                email: 'alice@laptop.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            },
-            // Mobile & Devices Technicians
-            {
-              id: '3', 
-              user_id: '3',
-              specialization: 'Phone Repair',
-              experience: '3 years',
-              rate: 12000,
-              is_available: true,
-              latitude: -1.9506,
-              longitude: 30.0588,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '3',
-                full_name: 'Sarah Mobile',
-                phone_number: '+250788123458',
-                email: 'sarah@mobile.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            },
-            {
-              id: '4',
-              user_id: '4',
-              specialization: 'iPhone Repair',
-              experience: '2 years',
-              rate: 13000,
-              is_available: true,
-              latitude: -1.9520,
-              longitude: 30.0600,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '4',
-                full_name: 'Mike iPhone',
-                phone_number: '+250788123459',
-                email: 'mike@iphone.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            },
-            // Network Setup Technicians
-            {
-              id: '5',
-              user_id: '5', 
-              specialization: 'Network Setup',
-              experience: '6 years',
-              rate: 16000,
-              is_available: true,
-              latitude: -1.9350,
-              longitude: 30.0590,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '5',
-                full_name: 'David Network',
-                phone_number: '+250788123460',
-                email: 'david@network.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            },
-            {
-              id: '6',
-              user_id: '6',
-              specialization: 'WiFi Setup',
-              experience: '3 years',
-              rate: 11000,
-              is_available: true,
-              latitude: -1.9480,
-              longitude: 30.0640,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              user: {
-                id: '6',
-                full_name: 'Emma WiFi',
-                phone_number: '+250788123461',
-                email: 'emma@wifi.rw',
-                role: 'TECHNICIAN',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            }
-          ]
-          console.log('🧪 Mock technicians loaded:', mockTechnicians.length)
-          setTechnicians(mockTechnicians)
-          setFilteredTechnicians(mockTechnicians)
+        console.log('✅ Homepage: Fetched technicians from database:', data?.length || 0, 'technicians')
+
+        if (data && data.length > 0) {
+          // Successfully loaded real technicians
+          console.log('✅ Real technician data loaded:', data.map(t => ({
+            id: t.id,
+            name: t.full_name,
+            specialization: t.specialization
+          })))
+          setTechnicians(data)
+          setFilteredTechnicians(data)
         } else {
-          setTechnicians(data || [])
-          setFilteredTechnicians(data || [])
+          // No real technicians found
+          console.log('⚠️ No real technicians found in database')
+          setTechnicians([])
+          setFilteredTechnicians([])
         }
       } catch (error) {
-        console.error('Error fetching technicians from database:', error)
-        // Don't set mock data - show empty state
+        console.error('❌ Homepage: Error fetching technicians from database:', error)
+        // Show empty state instead of mock data
         setTechnicians([])
         setFilteredTechnicians([])
       } finally {
@@ -235,42 +104,42 @@ export default function Home() {
       if (category) {
         const filtered = technicians.filter(tech => {
           const techSpecialization = tech.specialization.toLowerCase().trim()
-          
+
           return category.specializations.some(spec => {
             const categorySpec = spec.toLowerCase().trim()
-            
+
             // Priority 1: Exact match
             if (techSpecialization === categorySpec) return true
-            
+
             // Priority 2: Check for category-specific keywords
             const categoryKeywords: Record<string, string[]> = {
               'computer-repair': ['computer', 'laptop', 'desktop', 'software', 'hardware', 'system'],
               'mobile-devices': ['phone', 'mobile', 'smartphone', 'iphone', 'android', 'tablet'],
               'network-setup': ['network', 'wifi', 'internet', 'router', 'connectivity']
             }
-            
+
             const keywords = categoryKeywords[category.id] || []
             const techWords = techSpecialization.split(/[\s,\-_]+/).map(w => w.toLowerCase())
             const specWords = categorySpec.split(/[\s,\-_]+/).map(w => w.toLowerCase())
-            
+
             // Check if tech specialization contains relevant keywords for this category
-            const hasRelevantKeyword = keywords.some((keyword: string) => 
+            const hasRelevantKeyword = keywords.some((keyword: string) =>
               techWords.includes(keyword) || techWords.some(word => word.includes(keyword))
             )
-            
+
             if (!hasRelevantKeyword) return false
-            
+
             // Priority 3: Word matching within relevant specializations
-            return techWords.some(techWord => 
-              specWords.some(specWord => 
-                specWord.length > 3 && (techWord === specWord || 
-                (techWord.length > 4 && specWord.length > 4 && 
-                 (techWord.includes(specWord) || specWord.includes(techWord))))
+            return techWords.some(techWord =>
+              specWords.some(specWord =>
+                specWord.length > 3 && (techWord === specWord ||
+                  (techWord.length > 4 && specWord.length > 4 &&
+                    (techWord.includes(specWord) || specWord.includes(techWord))))
               )
             )
           })
         })
-        
+
         console.log(`🔍 Filtering for category "${category.name}":`, {
           categorySpecs: category.specializations,
           allTechnicians: technicians.map(t => t.specialization),
@@ -289,37 +158,37 @@ export default function Home() {
 
     return technicians.filter(tech => {
       const techSpecialization = tech.specialization.toLowerCase().trim()
-      
+
       return category.specializations.some(spec => {
         const categorySpec = spec.toLowerCase().trim()
-        
+
         // Priority 1: Exact match
         if (techSpecialization === categorySpec) return true
-        
+
         // Priority 2: Check for category-specific keywords
         const categoryKeywords: Record<string, string[]> = {
           'computer-repair': ['computer', 'laptop', 'desktop', 'software', 'hardware', 'system'],
           'mobile-devices': ['phone', 'mobile', 'smartphone', 'iphone', 'android', 'tablet'],
           'network-setup': ['network', 'wifi', 'internet', 'router', 'connectivity']
         }
-        
+
         const keywords = categoryKeywords[category.id] || []
         const techWords = techSpecialization.split(/[\s,\-_]+/).map(w => w.toLowerCase())
         const specWords = categorySpec.split(/[\s,\-_]+/).map(w => w.toLowerCase())
-        
+
         // Check if tech specialization contains relevant keywords for this category
-        const hasRelevantKeyword = keywords.some((keyword: string) => 
+        const hasRelevantKeyword = keywords.some((keyword: string) =>
           techWords.includes(keyword) || techWords.some(word => word.includes(keyword))
         )
-        
+
         if (!hasRelevantKeyword) return false
-        
+
         // Priority 3: Word matching within relevant specializations
-        return techWords.some(techWord => 
-          specWords.some(specWord => 
-            specWord.length > 3 && (techWord === specWord || 
-            (techWord.length > 4 && specWord.length > 4 && 
-             (techWord.includes(specWord) || specWord.includes(techWord))))
+        return techWords.some(techWord =>
+          specWords.some(specWord =>
+            specWord.length > 3 && (techWord === specWord ||
+              (techWord.length > 4 && specWord.length > 4 &&
+                (techWord.includes(specWord) || specWord.includes(techWord))))
           )
         )
       })
@@ -386,7 +255,7 @@ export default function Home() {
                 {heroContent.subtitle}
               </p>
             </div>
-            
+
             {/* Authentication Action Buttons for Anonymous Users */}
             {heroContent.showAuthButtons && (
               <div className="flex flex-col sm:flex-row gap-3">
@@ -404,7 +273,7 @@ export default function Home() {
                 </Button>
               </div>
             )}
-            
+
             {/* Dashboard Link for Authenticated Users */}
             {heroContent.showDashboardLink && (
               <Button asChild className="text-white hover:opacity-90" style={{ backgroundColor: '#FF385C' }}>

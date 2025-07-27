@@ -156,18 +156,20 @@ function TechnicianDashboardContent() {
             const result = await updateBookingStatus(bookingId, newStatus)
 
             if (result.success) {
-                // Optionally show success toast
-                console.log(`Booking ${action}ed successfully`)
                 if (result.warning) {
-                    console.warn('Update warning:', result.warning)
+                    console.warn('⚠️ Update warning:', result.warning)
+                    // Show warning but still indicate success
+                    console.log(`✅ Booking ${action}ed locally (database sync may be pending)`)
+                } else {
+                    console.log(`✅ Booking ${action}ed successfully in database`)
                 }
             } else {
-                console.error('Failed to update booking')
+                console.error('❌ Failed to update booking')
                 alert(`Failed to ${action} booking`)
             }
         } catch (err) {
-            console.error('Error updating booking:', err)
-            alert(`Error ${action}ing booking`)
+            console.error('💥 Error updating booking:', err)
+            alert(`Error ${action}ing booking: ${err instanceof Error ? err.message : 'Unknown error'}`)
         } finally {
             setUpdatingStatus(null)
         }

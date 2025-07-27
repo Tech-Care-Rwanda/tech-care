@@ -108,6 +108,7 @@ export function NavigationBar({ className = "" }: NavigationBarProps) {
     if (profile.role === 'CUSTOMER') {
       return [
         ...baseItems,
+        { href: '/technicians', label: 'All Technicians', icon: Users },
         { href: '/dashboard', label: 'My Bookings', icon: Calendar, badge: bookingCount > 0 ? bookingCount : undefined }
       ]
     }
