@@ -53,11 +53,3 @@
 
 ---
 
-#### **Step 4: Fix All Customer UI & Navigation Bugs**
-
-* **Problem:** The user interface for logged-in customers is confusing and broken.
-* **The Fix:** We will make the UI smart and responsive to the user's status.
-    * **Navigation Bar:** The main navigation bar **must** change based on whether a user is logged in.
-        * If the user is logged in, hide the "Login" and "Get Started" buttons. Show them links like "My Bookings" and a "Profile/Logout" menu instead.
-        * The technician's dashboard should not have a duplicate navigation bar. It should use a single, shared layout.
-    * **Redirects:** After a customer logs in, they **must** be automatically sent to the homepage (`/`) where they can see the list of technicians.
