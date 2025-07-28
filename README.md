@@ -8,7 +8,9 @@
 
 Tech-Care is a comprehensive platform designed to bridge the gap between customers seeking technical services and qualified technicians in Rwanda. Our platform provides a stable, end-to-end experience where customers can easily find, view, and book technicians, while providing technicians with effective tools to manage their bookings and profiles.
 
-![Tech-Care Platform Screenshot](https://via.placeholder.com/800x400/1f2937/ffffff?text=Tech-Care+Platform+Demo)
+[![Tech-Care Platform Demo](https://img.youtube.com/vi/lTIZ2oLgR8A/maxresdefault.jpg)](https://youtu.be/lTIZ2oLgR8A)
+
+*Click above to watch our platform demo video*
 
 ## 🚀 Quick Start
 
@@ -389,4 +391,4 @@ The platform includes built-in analytics for:
 
 **Built with ❤️ in Rwanda**
 
-For more information, visit our [GitHub repository](https://github.com/Tech-Care-Rwanda/tech-care) or check out our [live demo](https://tech-care-rwanda.vercel.app).
+For more information, visit our [GitHub repository](https://github.com/Tech-Care-Rwanda/tech-care) or watch our [demo video](https://youtu.be/lTIZ2oLgR8A).
